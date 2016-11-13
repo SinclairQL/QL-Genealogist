@@ -1,0 +1,153 @@
+                 QL GENEALOGIST VERSION 3 (POINTER VERSION)
+                 ------------------------------------------
+
+ UPDATES SINCE V3.20:
+
+ V3.21
+ -----
+ - ReLoad now clears out an existing database completely.
+ - The program now copes with sub-directories properly.
+ - There is no longer an error (or crash) if you try to Quit when choosing the
+   sex of the first person to be entered in a new database.
+ - If a county file is not included in your current database, this no longer
+   crashes the program when selected from the Research Reports Menu.
+ - Manual improved
+ - If you try to use PICK when there are no names in the database to select
+   from, any that you have already typed are not lost.
+ - There are no longer any problems if you enter several sons and daughters for
+   the same person (highlighting the father's name before adding each child).
+ - A major problem with entering notes from the Research Menu when a selected
+   person did not already have any notes has been overcome.
+ - It is now easier to enter numbers (display tidied up)
+ - The year for a date must be at least 100A.D.  Any two digit year is added to
+   the current century eg. a date of 1/1/99 becomes 1/1/1999 (presuming that we
+   are all still in the 20th Century!).  Year 2000 compatible.
+ - The Update Notes menu, no longer crashes if you delete an item.  The
+   deleted item is also now shown as unavailable (in red ink).
+ - Verify now warns you if a male person has been listed as someone's mother (or
+   a female person listed as someone's father)
+ - Verify now warns you if two people of the same sex are shown as spouses!
+ - Create EVENT now warns you if the changes to a research segment have not
+   been saved before you try to use this option.
+
+ v3.22
+ -----
+ - Files converted from earlier versions could sometimes give an error.  This
+   has now been rectified.
+ - The program now ensures that christian names are entered with the first
+   letter in capitals, the rest in lower case.
+ - The lines joining generations are now displayed once again in the Network
+   view.
+ - If you reLoad a database, there is now a warning screen and you are told if
+   you have any unsaved edits.  Also cancel from the file selection screen no
+   longer leaves the program unless you cancel this menu when the program is
+   first run.
+ - You can now enter the details of mother and father for a spouse if you wish
+   (this means you can keep track of two families together).  In the past, this
+   seems to have worked provided that the couple had children.
+ - This change has also meant that a woman can have more than one husband
+   without children as well.
+ - The screen dealing with changing a person's details has now been tidied up -
+   there could be confusion over husband / wife.
+ - The program is now better at dealing with deleted entries.
+ - You can now move all of the windows without getting a bad parameter error.
+
+ v3.23
+ -----
+ - Slight modification to the boot program
+
+ v3.24
+ -----
+ - For some reason v3.22 and v3.23 did not load all databases giving out of heap
+   space and other errors.  This is now fixed.
+ - Names which do not start with a letter no longer crash the program.
+ - Changed program so that space within name tables is used up as much as possible
+ - Spouses who have both been married more than once no longer causes a problem
+ - Old databases are now updated on loading to ensure all spouses have a link.
+
+ v3.25
+ -----
+ - The TREE no longer misses the joining lines from some couples and joining
+   lines are correctly depicted for couples with no children
+ - A few bugs eradicated which could make the program report an error whilst
+   generating a TREE.
+ - Some System Names were still appearing on the print out.
+ - You can now pass the name of a network to load (useful for FileInfo II).
+   - use the filename which ends in _net for this to work (preceded by '\' if
+   you also want to set the display size).
+   This now gives the following options:
+
+   EXEC_W flp1_g3_obj;'flp2_ROYAL_net'  (Load the ROYAL family tree)
+
+   EXEC_W flp1_g3_obj;'800x600'         (Use 800x600 display mode)
+
+   EXEC_W flp1_g3_obj;'800x600\flp2_ROYAL_net' (use 800x600 display mode and
+                                                load ROYAL family tree)
+
+ - The program no longer 'loses' children if you have inadvertantly given
+   somone the wrong parent and then join them to the correct parent.
+ - Further tests are now carried out when you try to Join 2 people :
+   1) if they have already been specified as having different parents, you
+      cannot join two people as siblings!
+   2) you cannot join together two people with the same sex as spouses.
+ - If you have QMenu on your system, this is used to help you to select the
+   name of the family tree to be loaded.
+ - It is now harder to create a person with no name at all! Any which already
+   exist in the database are deleted during the loading process.
+ - You can no longer Go To a deleted person or System Name.
+ - The Index command now allows you to print a list of persons in the database
+   either alphabetically, or by Network ID number.
+ - When you Generate a Tree, all existing T markers are removed - only those
+   people who appeared on the latest tree will now have a T marker.
+ - When you Verify the tree, all existing V markers are removed
+ - Verify procedure improved - when two numbers are doubtful, both are marked
+   with V and other minor changes.
+ - You can now remove the markers from a Single person, or all persons in the
+   tree
+ - A new menu has been added to the Parameters - Options - Tolerences option.
+   You can now specify:
+   Search Year Tolerence    (this already existed and was the tolerence used if
+                             you wanted to search for someone who was born/died
+                             in a given year)
+   Generation Gap Tolerence (used in Verify - if the age difference between
+                             parent and child exceeds this, a warning is issued.
+                             Also note that you are warned if a parent was below
+                             16 when the child was born)
+   Age Gap Tolerence        (used in Verify - if the age difference between
+                             husband and wife exceeds this, a warning is given)
+ - If you add a text note to a given person, you are now given the option to use
+   FileInfo II to display the file associated with the text note (if FileInfo II
+   is installed on your system).
+ - Slight bug in Add Text / Add Image has been removed (could cause duplicates)
+ - QMenu is now used (if present) to allow you to choose the text file/image to
+   be linked to a Note for a person.
+ - You can now use the Parameters - Printer - Codes option to add the necessary
+   codes for your printer to control line spacing (Epson printers should use
+   ESC + n (where n is the line spacing in n/360 inch units).  In decimal, this
+   is 27,43,n
+   You can change the value of 'n' at print time, from the Layout menu (also
+   available via Parameters - Printer), selecting the Line Spacing option.
+   Note that this presumes that your printer needs three characters to change
+   line spacing.
+
+   If not, simply enter the whole sequence via Parameters - Printer - Codes -
+   Line Spacing and ensure that the Layout - Line Spacing value is set to zero.
+
+ v3.26
+ -----
+ - Change now offers you sub-menus for a persons parents and spouse(s).  You can
+   then amend the parents/spouse or remove them by setting their netword ID to
+   zero.
+ - Holes in the name tables are now filled up better.
+ - Some problems with multiple spouses/parents on both sides rectified.
+ - For some reason v3.25 could sometimes lock up when you tried to GO TO a
+   system name - this is now rectified (we hope!)
+ - Fixed a problem in previous versions which had problems where there was a
+   relatively low Network ID which pointed to a System Name - this could
+   prevent you adding any more names.
+ - If a 'System Child' had '*DELETED*' as part of its name, it would be removed
+   when the database was loaded, destroying the links between childless spouses!
+ - Program will now warn you if the memory is less than 125K and try to save the
+   data.  In the past, this could cause the program to freeze.
+
+

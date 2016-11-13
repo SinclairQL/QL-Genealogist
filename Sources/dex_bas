@@ -1,0 +1,2911 @@
+1 REMark DEX (Genealogy Import/Export program) v2
+5 REMark 1993-8 Chris Boutal
+9 REMark Some Improvements by Rich Mellor
+10 REMark $$asmb=win2_UTILS_THING_ext,0,12
+11 REMark $$asmb=win4_DIY_FZ_INARRAY_code,0,328
+100 REMark $$stak=8192
+110 REMark $$heap=4096
+120 REMark $$buff=256
+130 REMark $$chan=21
+140 REMark $$i
+150 cd$=cmd$:tree$=''
+160 IF LEN(cd$)>3
+170   x=0
+180   x2='\' INSTR cd$
+190   IF '_net' INSTR cd$>x2:tree$=cd$(x2+1 TO )
+200 END IF
+210 dex_ver$="2.01":compiler_ver$="3.36":pointer_ver$="0.14"
+220 temp$=DATE
+230 con_ver$="2":this_year=INT(temp$(1 TO 4))
+240 IF this_year<2000:this_year=2000
+250 IF DATE<1.238E9:SDATE this_year,4,1,0,0,0
+260 :
+1040 DEFine PROCedure initialise
+1050 DIM comma(9),quotes(12),notable%(4)
+1060 lr_col=-1:change_setup=0:loaded=0
+1070 pcwx=0:pcwy=0:start_person=1:stat_length=0:max_chan=20:max_len=20:list_form=0
+1080 ft_chan=7:stat_chan=6:err_chan=8:res_chan=4:pr_chan=10:sub_chan=19
+1090 data_chan=5:menu_chan=3:eve_chan=12:ide_chan=11:tree_chan=16:table_chan=14
+1100 io_chan=9:back_chan=17:stick_chan=15:ft1_chan=18:head_chan=20
+1110 DIM colours%(max_chan,2),rank%(12)
+1120 FOR i=ft_chan,ft1_chan,tree_chan,back_chan:colours%(i,0)=3:colours%(i,1)=7:colours%(i,2)=5
+1130 FOR i=table_chan,menu_chan,sub_chan:colours%(i,0)=0:colours%(i,1)=7:colours%(i,2)=5
+1140 FOR i=stat_chan,err_chan:colours%(i,0)=3:colours%(i,1)=7:colours%(i,2)=5
+1150 FOR i=stick_chan:colours%(i,0)=7:colours%(i,1)=0:colours%(i,2)=5
+1160 FOR i=pr_chan,res_chan:colours%(i,0)=0:colours%(i,1)=7:colours%(i,2)=5
+1170 FOR i=data_chan,eve_chan:colours%(i,0)=7:colours%(i,1)=3:colours%(i,2)=5
+1180 file_type=0:time_inc=1:num_recs=0:pick_field=0:pick_num=0:room=100
+1190 max_buf=126:units=1.609:units$='miles':id_count=0:form=0
+1200 import_names=1500:tol=5:reverse_names=0:import_recs=1600
+1210 max_child=50:preamble$='':postamble$=''
+1220 bar$="|":eol_char$='':eol$='':mar_char$="=":lm=5:lm$=''
+1230 tof$=CHR$(12)
+1240 norefs=1:nomarks=0
+1250 baud_rate=0:reverse$='no':reverse_names$='no'
+1260 surnum=0:len_com=0:len_place=0:len_source=0:tree_count=0:chrisnum=room
+1270 placenum=100:commentnum=100:sourcenum=100:tree_max=20:text_file$=''
+1280 mod_flag=0:recs_dev$='':image_file$=''
+1290 DIM fount_type$(2,1,1),page_width%(2)
+1300 fount_type$(2,1)=CHR$(14):fount_type$(1,1)=CHR$(15):fount_type$(2,0)=CHR$(20):fount_type$(1,0)=CHR$(18):p1=0:offset=0
+1310 nwidth=80:cond_width=132:page_width%(0)=75:page_width%(2)=38:page_width%(1)=122
+1320 max_names=import_names:len_chris=0:len_sur=0:top_margin=0
+1330 bottom_margin=3:page_length=66:slot=22
+1340 blanks$=FILL$(' ',slot)
+1350 recs_file$='':modify=0:table=0
+1360 print_dev$="ser1":column$='on':exp_file$=''
+1370 rec_edits=0:max_views=1:num_edits=0
+1380 sort_type=30:form_type=20:to_date=this_year
+1390 nextrec=1:max_recs=import_recs
+1400 screen_length=21:after=0:dest$='scr':fount_type=1
+1410 column_flag=0:current_tree=0:num_names=0
+1420 subject=6:spouse=7:father=3:mother=4:child=9:next_num=1
+1430 person=0:current_view=0:sort_length=1:max_size=0:min_size=0
+1440 surpos=0:chrispos=0:num_county=0
+1450 commentpos=1:sourcepos=1:placepos=1
+1460 dim_tables
+1470 END DEFine initialise
+1480 :
+1490 DEFine PROCedure dim_tables
+1500 DIM surname_table$(surnum,len_sur),chris_table$(chrisnum,len_chris)
+1510 DIM place_table$(placenum,len_place),comment_table$(commentnum,len_com)
+1520 DIM source_table$(sourcenum,len_source),grid_table(placenum)
+1530 DIM county_table%(placenum)
+1540 DIM sur_id%(surnum),chris_id%(chrisnum),place_id%(placenum),com_id%(commentnum),source_id%(sourcenum)
+1550 END DEFine dim_tables
+1560 :
+1570 DEFine PROCedure redim
+1580 LOCal i
+1590 nextrec=1:next_num=1:num_names=0
+1600 rec_edits=0:num_edits=0:person=0:p1=0:current_view=0:sort_length=1:max_size=0
+1610 DIM title$(max_child,7)
+1620 init_names
+1630 DIM screens%(max_views,max_child,1)
+1640 DIM surname_table$(surnum,len_sur),chris_table$(chrisnum,len_chris)
+1650 surpos=1:current_tree=0
+1660 FOR i=0 TO max_child:title$(i)='subject'
+1670 title$(spouse)='spouse':title$(father)='father':title$(mother)='mother'
+1680 END DEFine redim
+1690 :
+1700 MODE 4
+1710 initialise
+1720 start_pointer
+1730 init_menus
+1740 DATA '   ','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
+1750 DATA '1','2','3','4','5','6','7','8','9','10','11','12'
+1760 DATA 10,11,1,31,0,4,15,6,8,1,12,0,7,6,1,4,0,9999,0,11,10,13,14,0,23,0,17,12,16,17,0,59,0,20,30
+1770 DATA 'Event   ','Birth   ','Baptism ','Marriage','Death   ','Burial  ','','Remark  ','Master  ','All     '
+1780 DATA 'ASF','RCI','RCM','RCD','RPA','RPM','RPU','CEN','WIL','IGA','IGM','MON','OTH','CON','IDE','FAM','GIV','PLA','COM','SOU','NOT','NET','EVE','MAR','COU','REP'
+1790 DATA 1.841307E6,1.85118E6,1.861207E6,1.871202E6,1.881203E6,1.891205E6
+1800 extended_dates$=' C+-QX'
+1810 DATA 'Parent','Father','Mother','Child','Son','Daughter','Sibling','Brother','Sister','Uncle/Aunt','Uncle','Aunt','Nephew/Niece','Nephew','Niece','Spouse','Husband','Wife','Cousin','Cousin (M)','Cousin (F)'
+1820 DATA 'Family name','Date','Record id','Columns','Lines','Given first','Family first','Normal','Condensed','Expanded'
+1830 DATA '','','','Menu','Map','Data','Status','Family Net','Error','','Report','','Index','','Pick','Dialogue','Tree','Genealogist','Aux Family','Submenu',''
+1840 DATA 'All','Heads','Parents','No Issue'
+1850 RESTORE 100
+1860 DIM clock_field%(4,6),month$(12,3),note_type$(9,8),file_type$(25,3)
+1870 DIM num_month$(12,2),census_date(6),char_text$(14,15),chan_title$(max_chan,11)
+1880 DIM parent$(2,6),child$(2,8),sibling$(2,7),uncle$(2,10),nephew$(2,12),cousin$(2,10),rel_spouse$(2,7),sorted$(2,11),format$(3,12),type$(2,9),find_stat$(3,8)
+1890 char$='TAMHSXF/PBEVZNQ'
+1900 user_char$='*>+-!?#@%&<$`^='
+1910 FOR i=0 TO 14:char_text$(i)="<no text>"
+1920 FOR i=0 TO 12:READ month$(i)
+1930 FOR i=1 TO 12:READ num_month$(i)
+1940 FOR i=0 TO 4
+1950    FOR j=0 TO 6
+1960       READ clock_field%(i,j)
+1970    END FOR j
+1980 END FOR i
+1990 FOR i=0 TO 9:READ note_type$(i)
+2000 FOR i=0 TO 25:READ file_type$(i)
+2010 FOR i=0 TO 5:READ census_date(i)
+2020 FOR i=0 TO 2:READ parent$(i)
+2030 FOR i=0 TO 2:READ child$(i)
+2040 FOR i=0 TO 2:READ sibling$(i)
+2050 FOR i=0 TO 2:READ uncle$(i)
+2060 FOR i=0 TO 2:READ nephew$(i)
+2070 FOR i=0 TO 2:READ rel_spouse$(i)
+2080 FOR i=0 TO 2:READ cousin$(i)
+2090 FOR i=0 TO 2:READ sorted$(i)
+2100 FOR i=0 TO 3:READ format$(i)
+2110 FOR i=0 TO 2:READ type$(i)
+2120 FOR i=0 TO max_chan:READ chan_title$(i)
+2130 FOR i=0 TO 3:READ find_stat$(i)
+2140 logo
+2150 qwindow back_chan
+2160 CLS #0:CLS #1:CLS #2
+2170 STOP
+2180 :
+2190 DEFine PROCedure ft
+2200 LOCal bt,poll,exp_loop,k,i
+2210 REPeat poll
+2220    set_anchor 180,122,menu_chan
+2230    bt=get_opt(0,7,main_menu$,1,menu_chan,'',0,1)
+2240    SELect ON bt
+2250       =0:RETurn
+2260       =1:qlg2to3:loaded=0
+2270       =2:IF NOT loaded:recsdev(DATAD$)
+2272          IF exit_flag:NEXT poll
+2275          IF NOT loaded:reload:loaded=1
+2280             REPeat exp_loop
+2290                k=loadin_segment
+2300                SELect ON k
+2310                  =0:EXIT exp_loop
+2320                  =21:k=get_opt(0,2,export_menu$,3,menu_chan,'',0,1)
+2330                      IF k<2
+2340                         ma$=''
+2350                         IF k=1 THEN ma$=input_mark$
+2360                         export_net
+2370                      END IF
+2380                  =1 TO 12,20,22,25:export_recs
+2390                END SELect
+2400             END REPeat exp_loop
+2410       =4:IF NOT loaded:recsdev(DATAD$)
+2412          IF exit_flag:NEXT poll
+2415          IF NOT loaded:reload:loaded=1
+2420          k=loadin_segment
+2430          SELect ON k:=1 TO 12,20,22,25:export_places
+2440       =5:IF NOT loaded:recsdev(DATAD$)
+2442          IF exit_flag:NEXT poll
+2445          IF NOT loaded:reload:loaded=1
+2450          IF NOT get_tree THEN export_tree
+2460       =3:recsdev(DATAD$)
+2465          IF exit_flag:NEXT poll
+2470          import
+2480       =6:recsdev(DATAD$)
+2485          IF exit_flag:NEXT poll
+2487          reload
+2490          REPeat exp_loop
+2500             k=get_opt(0,5,table_menu$,1,menu_chan,'',0,1)
+2510             SELect ON k
+2520                =0:EXIT exp_loop
+2530                =1:i=cleanup(surname_table$,15,sur_id%)
+2540                =2:i=cleanup(chris_table$,16,chris_id%)
+2550                =3:i=cleanup(place_table$,17,place_id%)
+2560                =4:i=cleanup(comment_table$,18,com_id%)
+2570                =5:i=cleanup(source_table$,19,source_id%)
+2580             END SELect
+2590          END REPeat exp_loop
+2600       =7:IF NOT loaded:recsdev(DATAD$)
+2602          IF exit_flag:NEXT poll
+2605          IF NOT loaded:reload:loaded=1
+2610             REPeat exp_loop
+2620                k=loadin_segment
+2630                SELect ON k
+2640                  =0:EXIT exp_loop
+2650                  =21:k=get_opt(0,2,export_menu$,3,menu_chan,'',0,1)
+2660                      IF k<2
+2670                         ma$=''
+2680                         IF k=1 THEN ma$=input_mark$
+2690                         export_net_windows
+2700                      END IF
+2710                  =1 TO 12,20,22,25:export_rec_windows
+2720                END SELect
+2730             END REPeat exp_loop
+2740    END SELect
+2750 END REPeat poll
+2760 END DEFine ft
+2770 :
+2780 DEFine FuNction dates$(person)
+2790 LOCal flagb,flagd,birth$,death$
+2800 birth$="    ":flagb=0
+2810 IF yofb(person)>99 THEN birth$=yofb(person):flagb=1
+2820 IF INT(yofb(person))<>yofb(person) THEN birth$="    ":flagb=0
+2830 death$=-yofd%(person):flagd=1
+2840 IF yofd%(person)<100 THEN death$="-    ":flagd=0
+2850 IF yofd%(person)<0 THEN death$="":flagd=0
+2860 IF flagb OR flagd THEN RETurn " ("&birth$&death$&")":ELSE RETurn ""
+2870 END DEFine dates$
+2880 :
+2890 DEFine PROCedure save_data
+2900 LOCal i,j
+2910 m6 "Saving Segment:"&file_type$(21)
+2920 DELETE recs_dev$&file_type$(21)
+2930 OPEN_NEW #io_chan,recs_dev$&file_type$(21)
+2940 PRINT #io_chan,num_names;',';person
+2950 FOR i=1 TO num_names
+2960    PUT #io_chan,i,fa%(i),ma%(i),yofb(i),yofd%(i),ftable%(i),mark%(i),user_mark%(i),gtable%(i)
+2970 END FOR i
+2980 CLOSE #io_chan
+2990 save_markers
+3000 num_edits=0
+3010 qwindow stat_chan
+3020 END DEFine save_data
+3030 :
+3040 DEFine PROCedure logo
+3050 LOCal k,kk
+3060 CSIZE #back_chan,3,1
+3070 AT #back_chan,3,10:PRINT #back_chan,"Genealogist"
+3080 AT #back_chan,4,9:PRINT #back_chan,"Data Exchange"
+3090 CSIZE #back_chan,0,0
+3100 AT #back_chan,19,15:PRINT #back_chan,"Version ";dex_ver$;" 1993 Chris Boutal All Rights Reserved"
+3110 AT #back_chan,20,17:PRINT #back_chan,"Using Q_Liberator ";compiler_ver$;" 1993 Liberation Software"
+3120 AT #back_chan,21,21:PRINT #back_chan,"and Pointer Toolkit ";pointer_ver$;" 1988 Qjump Ltd"
+3130 ft
+3140 END DEFine logo
+3150 :
+3160 DEFine PROCedure get_field(field_len,chan,row,col,num_only,x$)
+3170 LOCal dot,dash,oldlen,j,k,pos,moved
+3180 LOCal space,nc,k$,field_loop,final$(0,field_len),new_field$(0,field_len)
+3190 next_field=1:exit_flag=0:next_record=0:next_page=0:pick_field=0
+3200 new_field$(0)=x$:pos=1:moved=0:dot=0:dash=0:space=0
+3210 IF after THEN pos=2:moved=1
+3220 final$(0)=new_field$(0)&FILL$(' ',field_len)
+3230 REPeat field_loop
+3240    AT #chan,row,col:PRINT #chan,final$(0)
+3250    OVER #chan,-1
+3260    BLOCK #chan,6,10,(col+pos-1)*6,row*10,colours%(chan,2)
+3270    k$=INKEY$(-1):k=CODE(k$)
+3280    BLOCK #chan,6,10,(col+pos-1)*6,row*10,colours%(chan,2)
+3290    OVER #chan,0
+3300    IF pos=1 THEN space=1
+3310    SELect ON k
+3320       =192:pos=pos-1:moved=1:IF pos<1 THEN pos=field_len
+3330       =193,196:pos=1:moved=1
+3340       =200:pos=pos+1:moved=1:IF pos>field_len THEN pos=1
+3350       =201,204:moved=1
+3360              FOR pos=field_len TO 1 STEP -1:IF final$(0,pos)<>" " THEN EXIT pos
+3370              IF pos<field_len THEN pos=pos+1
+3380       =194,195,202
+3390          nc=1:IF k=195 THEN nc=pos-1:pos=1
+3400          IF nc<1 THEN nc=1
+3410          IF k=194 THEN pos=pos-1:IF pos<1 THEN pos=1
+3420          moved=1
+3430          FOR j=pos TO field_len-nc:final$(0,j)=final$(0,j+nc)
+3440          FOR j=field_len-nc+1 TO field_len:final$(0,j)=" "
+3450          IF pos=1 AND num_only=1 THEN final$(0,1)="0":moved=0
+3460       =203:FOR j=pos TO field_len:final$(0,j)=" ":moved=1
+3470          IF pos=1 AND num_only=1 THEN final$(0,1)="0":moved=0
+3480       =27,9,10,253,208,216,212,220,240:
+3490          IF num_only=6
+3500             IF ABS(final$(0))>num_names THEN BEEP 1500,100:NEXT field_loop
+3510          END IF
+3520          new_field$(0,1 TO field_len)=final$(0,1 TO field_len)
+3530          SELect ON k
+3540             =253:next_field=-1
+3550             =208:next_field=-1:next_record=-1
+3560             =212:next_field=-1:next_page=-1
+3570             =216:next_record=1
+3580             =220:next_page=1
+3590             =27:exit_flag=1
+3600             =240:pick_field=chan:AT #chan,row,col:RETurn
+3610          END SELect
+3620          EXIT field_loop
+3630       =REMAINDER
+3640          IF ((num_only=1 OR num_only=6) AND ((k>=48 AND k<=57) OR (pos=1 AND dash=0 AND k=45) OR (dot=0 AND k=46))) OR num_only<>1
+3650             IF k$='"' THEN k$="'"
+3660             IF num_only=2 AND (k>=97 AND k<=122) THEN k=k-32:k$=CHR$(k)
+3670             IF num_only=5 AND space AND (k>=97 AND k<=122) THEN k=k-32:k$=CHR$(k)
+3680             IF moved=0
+3690                final$(0)=FILL$(" ",field_len)
+3700             ELSE
+3710                FOR j=field_len TO (pos+1) STEP -1:final$(0,j)=final$(0,j-1)
+3720             END IF
+3730             moved=1
+3740             final$(0,pos)=k$:pos=pos+1:IF pos>field_len THEN pos=field_len
+3750          ELSE
+3760             BEEP 1500,100
+3770          END IF
+3780          IF k=45 THEN dash=1
+3790          IF k=46 THEN dot=1
+3800          IF k=32 THEN space=1
+3810    END SELect
+3820    IF k<>32 THEN space=0
+3830 END REPeat field_loop
+3840 oldlen=1
+3850 FOR j=field_len TO 1 STEP -1:IF new_field$(0,j)<>" " THEN oldlen=j:EXIT j
+3860 IF oldlen=1 AND num_only=1 AND new_field$(0,1)="-" OR new_field$(0,1)="." THEN new_field$(0,1)="0"
+3870 new_field$(0,0)=oldlen
+3880 AT #chan,row,col:PRINT #chan,new_field$(0)
+3890 x$=new_field$(0)
+3900 IF num_only=4 THEN x$=month$(check_clock(new_field$(0)))
+3910 AT #chan,row,col:PRINT #chan,x$
+3920 RETurn
+3930 END DEFine get_field
+3940 :
+3950 DEFine PROCedure do_sort(table)
+3960 LOCal i,d,e,b,temp,j
+3970 LOCal sl1,sl2,sl3
+3980 i=1
+3990 REPeat sl1
+4000   IF 2^i>count+1 THEN EXIT sl1
+4010   i=i+1
+4020 END REPeat sl1
+4030 j=2^i-1
+4040 REPeat sl2
+4050    j=INT(j/2)
+4060    IF NOT j THEN EXIT sl2
+4070    b=1:d=count-j+1:i=b
+4080    REPeat sl3
+4090       e=i+j-1
+4100       IF table(i-1)>table(e)
+4110          temp=table(e):table(e)=table(i-1)
+4120          table(i-1)=temp
+4130          temp=sort_table%(e):sort_table%(e)=sort_table%(i-1)
+4140          sort_table%(i-1)=temp
+4150          i=i-j
+4160          IF i<1
+4170             b=b+1
+4180             IF b>d THEN EXIT sl3
+4190             i=b
+4200          END IF
+4210          NEXT sl3
+4220       END IF
+4230       b=b+1
+4240       IF b>d THEN EXIT sl3
+4250       i=b
+4260    END REPeat sl3
+4270 END REPeat sl2
+4280 END DEFine do_sort
+4290 :
+4300 DEFine PROCedure get_params
+4310 LOCal i,j
+4320 IF NOT exists%(13) THEN RETurn
+4330 m6 "Loading Segment:CON"
+4340 OPEN_IN #io_chan,recs_dev$&'CON'
+4350 INPUT #io_chan,i
+4360 IF i<>con_ver$ THEN er 'Your config file is out of date','it has been ignored':qwindow stat_chan:CLOSE #io_chan:RETurn
+4370 INPUT #io_chan,units
+4380 INPUT #io_chan,nwidth
+4390 INPUT #io_chan,cond_width
+4400 INPUT #io_chan,slot
+4410 INPUT #io_chan,page_length
+4420 INPUT #io_chan,top_margin
+4430 INPUT #io_chan,bottom_margin
+4440 INPUT #io_chan,column$
+4450 INPUT #io_chan,print_dev$
+4460 INPUT #io_chan,lm
+4470 INPUT #io_chan,baud_rate
+4480 INPUT #io_chan,tol
+4490 INPUT #io_chan,reverse_names:IF reverse_names THEN reverse_names$='yes'
+4500 INPUT #io_chan,start_person
+4510 INPUT #io_chan,fount_type$(1,1)
+4520 INPUT #io_chan,fount_type$(1,0)
+4530 INPUT #io_chan,fount_type$(2,1)
+4540 INPUT #io_chan,fount_type$(2,0)
+4550 INPUT #io_chan,preamble$
+4560 INPUT #io_chan,postamble$
+4570 INPUT #io_chan,tof$
+4580 INPUT #io_chan,eol_char$
+4590 INPUT #io_chan,mar_char$
+4600 INPUT #io_chan,bar$
+4610 INPUT #io_chan,lr_col
+4620 FOR i=0 TO max_chan
+4630    FOR j=0 TO 2:INPUT #io_chan,colours%(i,j)
+4640 END FOR i
+4650 FOR i=0 TO 12:INPUT #io_chan,rank%(i)
+4660 units$='miles':IF units=1 THEN units$='km'
+4670 page_width%(0)=nwidth-lm
+4680 page_width%(1)=INT(cond_width-lm/2)
+4690 page_width%(2)=INT(nwidth/2-lm*2)
+4700 IF baud_rate THEN BAUD baud_rate
+4710 CLOSE #io_chan
+4720 qwindow stat_chan
+4730 END DEFine get_params
+4740 :
+4750 DEFine FuNction QLG2_check_dir(file_name$,io)
+4760 LOCal x,record$,dir$,file$,win,check_win,check_loop
+4770 QLG2_get_device(file_name$):found=0
+4780 REPeat check_win
+4790    QLG2_get_directory QLG2_recs_dev$
+4800    INPUT #io_chan,record$
+4810    REPeat check_loop
+4820       IF EOF(#io_chan) THEN EXIT check_loop
+4830       INPUT #io_chan,record$
+4840       win='->' INSTR record$
+4850       IF win>=3
+4860          IF record$(1 TO win-2) INSTR file$=1
+4870             dir$=dir$&record$(1 TO win-2)&'_'
+4880             CLOSE #io_chan
+4890             NEXT check_win
+4900          END IF
+4910       END IF
+4920       IF LEN(dir$)>8 AND dir$(1)=='n' THEN record$=record$(6 TO)
+4930       IF record$==file$ THEN found=1:EXIT check_win
+4940    END REPeat check_loop
+4950    EXIT check_win
+4960 END REPeat check_win
+4970 CLOSE #io_chan
+4980 DELETE QLG2_recs_dev$&"tmp"
+4990 SELect ON io
+5000    =0:SELect ON found
+5010          =0:err_code=0
+5020          =1:err_code=-warn('File exists',file$,'Overwrite')
+5030       END SELect
+5040    =1:SELect ON found
+5050          =0:err_code=1:er "File not found",""
+5060          =1:err_code=0
+5070       END SELect
+5080 END SELect
+5090 RETurn err_code
+5100 END DEFine QLG2_check_dir
+5110 :
+5120 DEFine FuNction QLG2_get_file(message$,x$,num)
+5130 LOCal a$,dir_loop
+5140 QLG2_get_device(x$):a$=file$
+5150 REPeat dir_loop
+5160    exit_flag=0
+5170    set_anchor 87,142,stick_chan
+5180    x$=stick_up$(2,message$,x$,40,0)
+5190    IF exit_flag THEN RETurn 1
+5200    IF NOT QLG2_check_dir(x$,num) THEN EXIT dir_loop
+5210 END REPeat dir_loop
+5220 RETurn 0
+5230 END DEFine QLG2_get_file
+5240 :
+5250 DEFine FuNction condat$(qual,num)
+5260 LOCal m,dash1$,dash2$,dual_flag,next_yr
+5270 con_y=INT(num/1000)
+5280 m=INT((num-con_y*1000)/50)
+5290 con_d=num-con_y*1000-m*50
+5300 SELect ON con_d
+5310    =0:con_d$='  '
+5320    =1 TO 9:con_d$=' '&con_d
+5330    =10 TO 99:con_d$=con_d
+5340 END SELect
+5350 con_d$=extended_dates$(qual+1)&con_d$
+5360 IF qual=4 THEN con_d$=extended_dates$(5)&'  '
+5370 con_m$='   ':y$='    '
+5380 dual_flag=0
+5390 IF m>12 AND m<16 THEN m=m-12:dual_flag=1
+5400 IF m<13 AND m>0 THEN con_m$=month$(m)
+5410 IF con_y>99 THEN y$=con_y
+5420 next_yr=con_y+1
+5430 IF dual_flag THEN y$=y$&'/'&next_yr
+5440 IF LEN(y$)=3 THEN y$=y$&' '
+5450 dash1$='-':dash2$='-'
+5460 IF con_d$='   ' THEN dash1$=' '
+5470 IF con_m$='   ' THEN dash2$=' '
+5480 RETurn con_d$&dash1$&con_m$&dash2$&y$
+5490 END DEFine condat$
+5500 :
+5510 DEFine FuNction check_clock(d$)
+5520 LOCal i
+5530 FOR i=0 TO 12:IF month$(i)==d$ THEN RETurn i
+5540 FOR i=1 TO 12:IF num_month$(i)==d$ THEN RETurn i
+5550 RETurn 0
+5560 END DEFine check_clock
+5570 :
+5580 DEFine PROCedure init_recs
+5590 LOCal i
+5600 DIM rec_id%(max_recs),rec_file%(max_recs),rec_date(max_recs),rec_link%(max_recs),rec_stamp(max_recs),rec_type%(max_recs),rec_ref%(max_recs),rec_gtable%(max_recs),rec_ftable%(max_recs),rec_ptable%(max_recs),rec_stable%(max_recs),rec_ctable%(max_recs),rec_exdate%(max_recs),rec_event%(max_recs),rec_relate%(max_recs)
+5610 num_recs=0:rec_edits=0
+5620 END DEFine init_recs
+5630 :
+5640 DEFine PROCedure load_records(num,selective)
+5650 LOCal count_refs,ic,x,a$
+5660 LOCal i,j,ii,m,d,file$,count
+5670 IF NOT num THEN RETurn
+5680 file$=recs_dev$&file_type$(num):exit_flag=0
+5690 IF file$=recs_file$ AND NOT selective AND modify THEN RETurn
+5700 recs_file$=file$
+5710 IF NOT selective THEN modify=1
+5720 OPEN_IN #io_chan,recs_file$
+5730 INPUT #io_chan,record$
+5740 IF record$='"limits"'
+5750    INPUT #io_chan,record$
+5760    ic=',' INSTR record$
+5770    count=record$(1 TO ic-1)
+5780    IF NOT selective
+5790       max_recs=count+room+2
+5800       init_recs
+5810    END IF
+5820    i=',' INSTR record$(ic+1 TO)+ic
+5830    num_refs=record$(i+1 TO)
+5840    count_refs=0
+5850    IF selective>=2 AND num_refs<1 THEN CLOSE #io_chan:RETurn
+5860    FOR i=0 TO 5:INPUT #io_chan,record$
+5870 ELSE
+5880    max_recs=import_recs:init_recs
+5890 END IF
+5900 m6 "Loading Segment:"&file_type$(num)&' ('&num_recs&' records loaded)'
+5910 DIM in_list%(13):fposition=1
+5920    num_recs=count:nextrec=0:rec_edits=0
+5930    FOR i=1 TO num_recs
+5940       get_inlist
+5950       IF set_rec(i) THEN EXIT i
+5960       IF rec_id%(i)>nextrec THEN nextrec=rec_id%(i)
+5970       length=LEN(rec_name$(i))
+5980       IF length>sort_length THEN sort_length=length
+5990    END FOR i
+6000    nextrec=nextrec+1
+6010 CLOSE #io_chan
+6020 qwindow stat_chan
+6030 END DEFine load_records
+6040 :
+6050 DEFine PROCedure sort_recs
+6060 LOCal i
+6070 REMark IF sort_type=10 THEN sort_name_tables
+6080 count=0
+6090 DIM sort_table%(num_recs),birth_table(num_recs)
+6100 SELect ON sort_type
+6110    =10:FOR i=1 TO num_recs
+6120            IF selected%(i)
+6130               sort_table%(count)=i
+6140               birth_table(count)=INARRAY%(sorted_sur%,0,rec_ftable%(i))*(chrispos+1)+INARRAY%(sorted_chris%,0,rec_gtable%(i))-1E7
+6150               count=count+1
+6160            END IF
+6170        END FOR i
+6180    =20:FOR i=1 TO num_recs
+6190           IF selected%(i)
+6200              sort_table%(count)=i
+6210              birth_table(count)=rec_date(i)
+6220              count=count+1
+6230           END IF
+6240        END FOR i
+6250     =30:FOR i=1 TO num_recs
+6260           IF selected%(i)
+6270              sort_table%(count)=i
+6280              birth_table(count)=num_recs*rec_file%(i)+rec_id%(i)
+6290              count=count+1
+6300           END IF
+6310        END FOR i
+6320 END SELect
+6330 count=count-1
+6340 do_sort birth_table
+6350 END DEFine sort_recs
+6360 :
+6370 DEFine FuNction stamp$(num)
+6380 LOCal temp$
+6390 temp$=DATE$(num)
+6400 RETurn '['&temp$(10 TO 11)&'-'&temp$(6 TO 8)&'-'&temp$(1 TO 4)&']'
+6410 END DEFine stamp$
+6420 :
+6430 DEFine PROCedure save_recs
+6440 LOCal i,count,j
+6450 LOCal from_year(5),to_year(5)
+6460 FOR i=0 TO 5:from_year(i)=1E7
+6470 exit_flag=0
+6480 IF status THEN exit_flag=1:RETurn
+6490 pwait
+6500 IF num_edits OR rec_edits
+6510    save_table surname_table$,sur_id%,surpos,15
+6520    save_table chris_table$,chris_id%,chrispos,16
+6530 END IF
+6540 IF num_edits THEN save_data
+6550 IF NOT rec_edits THEN qwindow err_chan:RETurn
+6560 save_table place_table$,place_id%,placepos,17
+6570 save_table comment_table$,com_id%,commentpos,18
+6580 save_table source_table$,source_id%,sourcepos,19
+6590 count=0:table=0
+6600 m6 "Saving Segment:"&file_type$(file_type)
+6610 file$=recs_dev$&file_type$(file_type)
+6620 DELETE file$
+6630 OPEN_NEW #io_chan,file$
+6640    ref_count=0
+6650    FOR i=1 TO num_recs
+6660       IF rec_id%(i)
+6670          IF rec_ref%(i) THEN ref_count=ref_count+1
+6680          j=rec_type%(i)
+6690          IF rec_date(i)<from_year(j) AND rec_date(i)<>0 THEN from_year(j)=rec_date(i)
+6700          IF rec_date(i)>to_year(j) THEN to_year(j)=rec_date(i)
+6710          count=count+1
+6720       END IF
+6730    END FOR i
+6740    PRINT #io_chan,'"limits"'
+6750    PRINT #io_chan,count;',';file_type;',';ref_count
+6760    FOR i=0 TO 5
+6770       PRINT #io_chan,i;',';from_year(i);',';to_year(i)
+6780    END FOR i
+6790 chron_sort
+6800 fposition=1
+6810 FOR i=0 TO count
+6820    j=sort_table%(i)
+6830    IF rec_id%(j)
+6840       PUT #io_chan,fposition,rec_id%(j),rec_file%(j),rec_date(j),rec_link%(j),rec_stamp(j),rec_type%(j),rec_ref%(j),rec_ftable%(j),rec_stable%(j),rec_ptable%(j),rec_ctable%(j),rec_gtable%(j),rec_exdate%(j),rec_relate%(j)
+6850    END IF
+6860 END FOR i
+6870 CLOSE #io_chan
+6880 rec_edits=0
+6890 qwindow stat_chan
+6900 qwindow err_chan
+6910 END DEFine save_recs
+6920 :
+6930 DEFine PROCedure QLG2_check_files
+6940 LOCal record$,ki,l,chk,k
+6950 DIM QLG2_exists%(24)
+6960 QLG2_get_device(QLG2_recs_dev$)
+6970 QLG2_get_directory QLG2_recs_dev$
+6980 REPeat chk
+6990    IF EOF(#io_chan) THEN EXIT chk
+7000    INPUT #io_chan,record$
+7010       l=LEN(record$)
+7020       k=LEN(QLG2_recs_dev$)-LEN(dir$)
+7030       IF l>=k+3
+7040       FOR ki=0 TO DIMN(QLG2_exists%)
+7050          IF record$(l-(k+3)+1 TO l)==file$&file_type$(ki) THEN QLG2_exists%(ki)=1:EXIT ki
+7060       END FOR ki
+7070     END IF
+7080 END REPeat chk
+7090 CLOSE #io_chan
+7100 DELETE QLG2_recs_dev$&'tmp'
+7110 END DEFine QLG2_check_files
+7120 :
+7130 DEFine PROCedure make_table
+7140 LOCal count,record$,i,j,ki,ic,comma(7)
+7150 check_files
+7160 DIM limit_table(36,3)
+7170 count=-1:max_refs=0
+7180 FOR ki=1 TO 12,20
+7190    IF exists%(ki)
+7200       OPEN_IN #io_chan,recs_dev$&file_type$(ki)
+7210       INPUT #io_chan,record$:IF record$<>'"limits"' THEN NEXT ki:EXIT ki
+7220       INPUT #io_chan,record$:ic=',' INSTR record$:i=',' INSTR record$(ic+1 TO)+ic
+7230       max_refs=max_refs+record$(i+1 TO)
+7240       FOR i=0 TO 5
+7250          INPUT #io_chan,record$
+7260          IF record$<>i&',9.999999E6,0'
+7270             comma(1)=',' INSTR record$
+7280             FOR j=1 TO 2
+7290               comma(j)="," INSTR record$(comma(j-1)+1 TO)+comma(j-1)
+7300             END FOR j
+7310             comma(3)=LEN(record$)+1
+7320             count=count+1
+7330             IF count>DIMN(limit_table,1) THEN EXIT ki
+7340             limit_table(count,0)=record$(1 TO comma(1)-1)
+7350             FOR j=1 TO 2:limit_table(count,j)=record$(comma(j)+1 TO comma(j+1)-1)
+7360             limit_table(count,3)=ki
+7370          END IF
+7380       END FOR i
+7390       CLOSE #io_chan
+7400    END IF
+7410 END FOR ki
+7420 len_table=count:table=1
+7430 END DEFine make_table
+7440 :
+7450 DEFine PROCedure recsdev(d$)
+7455 LOCal device$,r$
+7460 exit_flag=0
+7461 IF tree$=''
+7462   noQmenu=THING('Menus'):REMark test for QMenu
+7466   IF noQmenu=0
+7468     device$=FILE_SELECT$("Genealogist3 Database Name",,d$,'_net',,,1,1)
+7469     IF device$='':exit_flag=1
+7479   ELSE
+8010     device$=stick_up$(0,'Genealogist3 Database name:',d$,40,0)
+8015   END IF
+8017   IF exit_flag:recs_dev$=d$:RETurn
+8018   IF '_net' INSTR device$:device$=device$(1 TO '_net' INSTR device$)
+8019 ELSE
+8020   device$=tree$(1 TO '_net' INSTR tree$)
+8030 END IF
+8040 tree$=''
+8100 IF device$(LEN(device$))<>"_":device$=device$&"_"
+8110 recs_dev$=device$
+8120 get_device(recs_dev$)
+8130 tree_file$=dir$&'tree'
+8140 list_file$=dir$&'list'
+8150 END DEFine
+8160 :
+8170 DEFine PROCedure m6(text$)
+8180 LOCal length
+8190 set_anchor 0,0,menu_chan
+8200 length=LEN(text$)
+8210 IF length<>stat_length THEN shut stat_chan
+8220 stat_length=length
+8230 point_window -1,240,stat_chan,length*6+4,12
+8240 set_colours stat_chan,1
+8250 PRINT #stat_chan,text$
+8260 END DEFine m6
+8270 :
+8280 DEFine FuNction warn(text1$,text2$,text3$)
+8290 LOCal wk
+8300 wk=LEN(text3$):IF wk<6 THEN wk=6
+8310 DIM option$(1,wk)
+8320 qwindow err_chan
+8330 point_window -1,-1,err_chan,328,32
+8340 AT #err_chan,0,20:PRINT #err_chan,">>WARNING<<"
+8350 AT #err_chan,1,(50-LEN(text1$))/2:PRINT #err_chan,text1$
+8360 AT #err_chan,2,(50-LEN(text2$))/2:PRINT #err_chan,text2$
+8370 option$(1)='Cancel':option$(0)=text3$
+8380 wk=get_opt(0,1,option$,2,menu_chan,'',0,1)
+8390 qwindow err_chan:RETurn wk
+8400 END DEFine warn
+8410 :
+8420 DEFine PROCedure er(text1$,text2$)
+8430 qwindow err_chan
+8440 point_window -1,-1,err_chan,328,32
+8450 AT #err_chan,0,20:PRINT #err_chan,">>>ERROR<<<"
+8460 AT #err_chan,1,(50-LEN(text1$))/2:PRINT #err_chan,text1$
+8470 AT #err_chan,2,(50-LEN(text2$))/2:PRINT #err_chan,text2$
+8480 BEEP 1500,100:resume:qwindow err_chan:RETurn
+8490 END DEFine er
+8500 :
+8510 DEFine PROCedure resume
+8520 LOCal k
+8530 k=get_opt(0,0,ok_menu$,1,menu_chan,'',0,1)
+8540 END DEFine resume
+8550 :
+8560 DEFine FuNction get_segment
+8570 LOCal segs$(15,DIMN(segments$,2))
+8580 FOR i=1 TO 12:IF exists%(i) THEN segs$(i-1)=segments$(i-1)
+8590 FOR i=13 TO 16:IF exists%(i+7) THEN segs$(i-1)=segments$(i-1)
+8600 set_anchor 180,57,table_chan
+8610 file_type=get_opt(0,15,segs$,1,table_chan,pick_menu$,1,1)+1
+8620 other_segs
+8630 RETurn file_type
+8640 END DEFine get_segment
+8650 :
+8660 DEFine PROCedure other_segs
+8670 IF file_type=13 THEN file_type=20
+8680 IF file_type=14 THEN file_type=21
+8690 IF file_type=15 THEN file_type=22
+8700 IF file_type=16 THEN file_type=25
+8710 END DEFine other_segs
+8720 :
+8730 DEFine PROCedure get_markers
+8740 LOCal i
+8750 IF NOT exists%(23) THEN RETurn
+8760 IF NOT num_names THEN RETurn
+8770 m6 "Loading Segment:MAR"
+8780 mark_file$=recs_dev$&"MAR"
+8790 OPEN_IN #io_chan,mark_file$
+8800 FOR i=0 TO 14:INPUT #io_chan,char_text$(i)
+8810 CLOSE #io_chan
+8820 qwindow stat_chan
+8830 END DEFine get_markers
+8840 :
+8850 DEFine PROCedure save_markers
+8860 LOCal i
+8870 mark_file$=recs_dev$&'MAR'
+8880 DELETE mark_file$
+8890 OPEN_NEW #io_chan,mark_file$
+8900 FOR i=0 TO 14:PRINT #io_chan,char_text$(i)
+8910 CLOSE #io_chan
+8920 END DEFine save_markers
+8930 :
+8940 DEFine FuNction loadin_segment
+8950 exit_flag=0
+8960 make_table
+8970 file_type=get_segment:IF file_type=0 THEN RETurn 0
+8980 IF NOT exists%(file_type) THEN RETurn 0
+8990 SELect ON file_type
+9000    =1 TO 12,20,22,25:load_records file_type,0
+9010 END SELect
+9020 IF exit_flag THEN RETurn 0
+9030 RETurn file_type
+9040 END DEFine loadin_segment
+9050 :
+9060 DEFine FuNction get_tree
+9070 LOCal a$,i,j,k,l,record$,gtree
+9080 IF get_file("Loading: Tree file>",tree_file$,1) THEN RETurn 1
+9090 OPEN_IN #io_chan,tree_file$
+9100 INPUT #io_chan,current_tree
+9110 INPUT #io_chan,record$
+9120 INPUT #io_chan,slot
+9130 blanks$=FILL$(' ',slot)
+9140 INPUT #io_chan,min_size
+9150 INPUT #io_chan,max_size
+9160 INPUT #io_chan,max_level
+9170 INPUT #io_chan,tree_count
+9180 tree_max=tree_count+20
+9190 IF tree_count THEN DIM tree_edit$(tree_max,slot):FOR i=0 TO tree_count:INPUT #io_chan,tree_edit$(i)
+9200 DIM grid%(max_level,max_size,1)
+9210 REPeat gtree
+9220    IF EOF(#io_chan) THEN EXIT gtree
+9230    INPUT #io_chan,l:INPUT #io_chan,k:INPUT #io_chan,j:INPUT #io_chan,i
+9240    grid%(k,j,i)=l
+9250 END REPeat gtree
+9260 CLOSE #io_chan
+9270 RETurn 0
+9280 END DEFine get_tree
+9290 :
+9300 DEFine FuNction full_name$(num)
+9310 IF reverse_names
+9320 RETurn lookup_table$(surname_table$,15,sur_id%,ftable%,num)&' '&lookup_table$(chris_table$,16,chris_id%,gtable%,num)&dates$(num)
+9330 ELSE
+9340 RETurn lookup_table$(chris_table$,16,chris_id%,gtable%,num)&' '&lookup_table$(surname_table$,15,sur_id%,ftable%,num)&dates$(num)
+9350 END IF
+9360 END DEFine full_name$
+9370 :
+9380 DEFine PROCedure QLG2_get_device(f$)
+9390 LOCal x
+9400 x=LEN(f$)
+9410 dir$=QLG2_recs_dev$:file$=""
+9420 SELect ON x
+9430    =6 TO 40:IF "_" INSTR f$=5 THEN dir$=f$(1 TO 5):file$=f$(6 TO)
+9440             SELect ON x
+9450                =9 TO 40:IF f$(3)="_" AND f$(8)="_" THEN dir$=f$(1 TO 8):file$=f$(9 TO)
+9460                =8:IF f$(3)="_" AND f$(8)="_" THEN dir$=f$(1 TO 8)
+9470             END SELect
+9480    =5:IF "_" INSTR f$=5 THEN dir$=f$(1 TO 5)
+9490 END SELect
+9500 END DEFine QLG2_get_device
+9510 :
+9520 DEFine PROCedure QLG2_get_directory (pr_dev$)
+9522 LOCal t$,xlen,fstart,dir_len,loop
+9524 dir_len=LEN(dir$):fstart=LEN(dir$)
+9526 REPeat loop
+9528   DELETE QLG2_recs_dev$&'tmp'
+9530   OPEN_NEW #io_chan,QLG2_recs_dev$&'tmp'
+9532   DIR #io_chan,dir$
+9534   CLOSE #io_chan
+9536   OPEN_IN #io_chan,QLG2_recs_dev$&'tmp'
+9538   REPeat sub2
+9540     sub_found=0
+9542     IF EOF(#io_chan):EXIT sub2
+9544     INPUT #io_chan,t$
+9546     IF '->' INSTR t$
+9548       xlen=LEN(t$)-3:IF xlen>0:IF t$(1 TO xlen)==pr_dev$(dir_len+1 TO dir_len+xlen):sub_found=1:fstart=dir_len+xlen+1:dir$=pr_dev$(1 TO fstart)
+9550       IF sub_found:EXIT sub2
+9552     END IF
+9554   END REPeat sub2
+9556   CLOSE #io_chan
+9558   IF NOT sub_found:EXIT loop
+9560 END REPeat loop
+9563 OPEN_IN #io_chan,QLG2_recs_dev$&'tmp'
+9573 END DEFine
+9590 :
+9600 DEFine PROCedure load_data
+9610 LOCal i,j,record$
+9620 IF NOT exists%(21) THEN RETurn
+9630 m6 "Loading Segment:"&file_type$(21)
+9640 OPEN_IN #io_chan,recs_dev$&file_type$(21)
+9650 INPUT #io_chan,record$
+9660 num_names=record$(1 TO (',' INSTR record$-1))
+9670 person=record$(',' INSTR record$+1 TO)
+9680 IF start_person<=0 OR start_person>num_names THEN start_person=person:ELSE person=start_person
+9690 num_edits=0:max_names=num_names+room
+9700 init_names
+9710 FOR i=1 TO num_names
+9720    GET #io_chan,i,fa%(i),ma%(i),yofb(i),yofd%(i),ftable%(i),mark%(i),user_mark%(i),gtable%(i)
+9730    length=LEN(lookup_table$(chris_table$,16,chris_id%,gtable%,i)&lookup_table$(surname_table$,15,sur_id%,ftable%,i))+1
+9740    IF length>sort_length THEN sort_length=length
+9750 END FOR i
+9760 CLOSE #io_chan
+9770 FOR i=1 TO num_names
+9780    IF ftable%(i)>surpos THEN ftable%(i)=add_table%(surname_table$,sur_id%,'*MISSING*',15)
+9790    IF gtable%(i)>chrispos THEN gtable%(i)=add_table%(chris_table$,chris_id%,'*MISSING*',16)
+9800 END FOR i
+9810 count_children
+9820 qwindow stat_chan
+9830 get_markers
+9840 qwindow err_chan
+9850 END DEFine load_data
+9860 :
+9870 DEFine PROCedure reload
+9880 pwait
+9890 make_table
+9900 get_params
+9910 redim
+9920 FOR i=15 TO 19:load_table i
+9930 load_county
+9940 load_data
+9950 qwindow err_chan
+9960 END DEFine reload
+9970 :
+9980 DEFine FuNction test_date
+9990 LOCal m,N
+10000 N=31:m=check_clock(con_m$)
+10010 SELect ON m
+10020    =2:N=28:IF INT(con_y/4)=con_y/4 THEN N=29
+10030       IF INT(con_y/100)=con_y/100 AND INT(con_y/400)<>con_y/400 THEN N=28
+10040    =1,3,5,7,8,10,12:N=31
+10050    =4,6,9,11:N=30
+10060    =0:N=31
+10070 END SELect
+10080 r=0:IF con_d>N OR con_d<0 THEN r=5
+10090 RETurn r
+10100 END DEFine test_date
+10110 :
+10120 DEFine PROCedure chron_sort
+10130 LOCal i
+10140 IF NOT num_recs THEN RETurn
+10150 DIM selected%(num_recs)
+10160 FOR i=1 TO num_recs:selected%(i)=1
+10170 sort_type=20
+10180 sort_recs
+10190 END DEFine chron_sort
+10200 :
+10210 DEFine FuNction status
+10220 point_window -1,-1,data_chan,438,102
+10230 PRINT #data_chan,"Table name"TO 20;"Used" TO 30;"Available" TO 40 ;"Percent" TO 50;"Field length"\\
+10240 PRINT #data_chan,"Network data    NET"TO 20;num_names TO 30;max_names TO 40;INT(num_names*100/max_names);'%'
+10250 IF file_type<>0 AND file_type<>21 THEN PRINT #data_chan,"Loaded segment  "&file_type$(file_type) TO 20;num_recs TO 30;max_recs TO 40;INT(num_recs*100/max_recs);'%'
+10260 PRINT #data_chan
+10270 PRINT #data_chan,"Family names    FAM"TO 20;surpos TO 30;surnum TO 40;INT(surpos*100/surnum);'%' TO 50;len_sur
+10280 PRINT #data_chan,"Given names     GIV"TO 20;chrispos TO 30;chrisnum TO 40;INT(chrispos*100/chrisnum);'%' TO 50;len_chris
+10290 IF file_type<>0 AND file_type<>21
+10300    PRINT #data_chan,"Place names     PLA"TO 20;placepos TO 30;placenum TO 40;INT(placepos*100/placenum);'%' TO 50;len_place
+10310    PRINT #data_chan,"Comments        COM"TO 20;commentpos TO 30;commentnum TO 40;INT(commentpos*100/commentnum);'%' TO 50;len_com
+10320    PRINT #data_chan,"Sources         SOU"TO 20;sourcepos TO 30;sourcenum TO 40;INT(sourcepos*100/sourcenum);'%' TO 50;len_source
+10330 END IF
+10340 FOR i=0 TO 3:BLOCK #data_chan,1,100,117+60*i,0,colours%(data_chan,2)
+10350 k=get_opt(0,1,stick2_menu$,2,menu_chan,'',0,1)
+10360 qwindow data_chan
+10370 RETurn k
+10380 END DEFine status
+10390 :
+10400 DEFine PROCedure init_names
+10410 DIM attach%(max_names),fa%(max_names),ma%(max_names),yofb(max_names),yofd%(max_names),ftable%(max_names),point%(max_names),mark%(max_names),gtable%(max_names),user_mark%(max_names)
+10420 END DEFine init_names
+10430 :
+10440 DEFine FuNction set_rec(num)
+10450 IF num>max_recs THEN er 'Maximum record limit hit','':RETurn 1
+10460 rec_id%(num)=in_list%(0)
+10470 rec_file%(num)=in_list%(1)
+10480 rec_date(num)=in_date
+10490 rec_link%(num)=in_list%(3)
+10500 rec_stamp(num)=in_stamp
+10510 rec_type%(num)=in_list%(5)
+10520 rec_ref%(num)=in_list%(6)
+10530 rec_ftable%(num)=in_list%(7)
+10540 rec_stable%(num)=in_list%(8)
+10550 rec_ptable%(num)=in_list%(9)
+10560 rec_ctable%(num)=in_list%(10)
+10570 rec_gtable%(num)=in_list%(11)
+10580 rec_exdate%(num)=in_list%(12)
+10590 rec_relate%(num)=in_list%(13)
+10600 IF rec_ftable%(num)>surpos THEN rec_ftable%(num)=add_table%(surname_table$,sur_id%,'*MISSING*',15)
+10610 IF rec_gtable%(num)>chrispos THEN rec_gtable%(num)=add_table%(chris_table$,chris_id%,'*MISSING*',16)
+10620 IF rec_ptable%(num)>placepos THEN rec_ptable%(num)=add_table%(place_table$,place_id%,'*MISSING*',17)
+10630 IF rec_ctable%(num)>commentpos THEN rec_ctable%(num)=add_table%(comment_table$,com_id%,'*MISSING*',18)
+10640 IF rec_stable%(num)>sourcepos THEN rec_stable%(num)=add_table%(source_table$,source_id%,'*MISSING*',19)
+10650 RETurn 0
+10660 END DEFine set_rec
+10670 :
+10680 DEFine FuNction sex%(num)
+10690 IF 'M' INSTR markers$(num,0) THEN RETurn 1
+10700 IF 'F' INSTR markers$(num,0) THEN RETurn 2
+10710 RETurn 0
+10720 END DEFine sex%
+10730 :
+10740 DEFine PROCedure set_colours(chan,num)
+10750 PAPER #chan,colours%(chan,0)
+10760 INK #chan,colours%(chan,1)
+10770 IF num THEN CLS #chan
+10780 BORDER #chan,1,colours%(chan,2)
+10790 END DEFine set_colours
+10800 :
+10810 DEFine PROCedure count_children
+10820 LOCal i
+10830 DIM attach%(max_names)
+10840 FOR i=1 TO num_names
+10850    IF fa%(i)>0 THEN attach%(fa%(i))=attach%(fa%(i))+1
+10860    IF ma%(i)>0 THEN attach%(ma%(i))=attach%(ma%(i))+1
+10870    IF fa%(i)<0 THEN attach%(-fa%(i))=attach%(-fa%(i))+100
+10880    IF ma%(i)<0 THEN attach%(-ma%(i))=attach%(-ma%(i))+100
+10890 END FOR i
+10900 END DEFine count_children
+10910 :
+10920 DEFine PROCedure load_county
+10930 LOCal i,count_rec$
+10940 IF NOT exists%(24) THEN DIM county$(0,3),country$(0,3):RETurn
+10950 OPEN_IN #ide_chan,recs_dev$&'COU'
+10960 INPUT #ide_chan,num_county
+10970 DIM county$(num_county,3),country$(num_county,3)
+10980 FOR i=1 TO num_county
+10990    INPUT #ide_chan,count_rec$
+11000    county$(i)=count_rec$
+11010    IF LEN(count_rec$)>3
+11020       country$(i)=count_rec$(5 TO)
+11030    END IF
+11040 END FOR i
+11050 CLOSE #ide_chan
+11060 END DEFine load_county
+11070 :
+11080 DEFine FuNction relationship$(num)
+11090 LOCal k,g,gg$,i
+11100 SELect ON num
+11110    =0,100,200:RETurn 'Unknown'
+11120    =-1,-101,-201:RETurn 'No Relation'
+11130    =-2,-102,-202:RETurn 'Relation'
+11140 END SELect
+11150 k=INT(num/100)
+11160 gg$=''
+11170 g=INT((num-k*100)/10)
+11180 SELect ON g
+11190    =1:gg$='Grand'
+11200    =2:gg$='Great Grand'
+11210 END SELect
+11220 i=num-k*100-g*10
+11230 SELect ON i
+11240    =1:RETurn 'Subject'
+11250    =2:RETurn gg$&parent$(k)
+11260    =3:RETurn gg$&child$(k)
+11270    =4:RETurn gg$&uncle$(k)
+11280    =5:RETurn gg$&nephew$(k)
+11290    =6:RETurn sibling$(k)
+11300    =7:RETurn cousin$(k)
+11310    =8:RETurn rel_spouse$(k)
+11320 END SELect
+11330 RETurn 'Unknown'
+11340 END DEFine relationship$
+11350 :
+11360 DEFine FuNction rec_name$(num)
+11370 LOCal mc$,ms$
+11380 mc$=lookup_table$(chris_table$,16,chris_id%,rec_gtable%,num)
+11390 ms$=lookup_table$(surname_table$,15,sur_id%,rec_ftable%,num)
+11400 IF reverse_names THEN RETurn ms$&' '&mc$:ELSE RETurn mc$&' '&ms$
+11410 END DEFine rec_name$
+11420 :
+11430 DEFine FuNction rec_pos(id)
+11440 ij=INARRAY%(rec_id%,0,id)
+11450 IF ij<0 THEN ij=0
+11460 RETurn ij
+11470 END DEFine rec_pos
+11480 :
+11490 DEFine PROCedure table_sort(table_name$,tablepos,tablelen)
+11500 LOCal i,j,lena,a$,ki,l
+11510 DIM alpha_sort$(tablepos,tablelen),sort_table%(tablepos)
+11520 count=0
+11530 FOR i=1 TO tablepos
+11540    sort_table%(count)=i
+11550    a$=table_name$(i):lena=LEN(a$):l=0
+11560    IF lena>1
+11570       FOR j=1 TO lena-1
+11580          IF a$(j)=' '
+11590             FOR ki=j TO lena-1:a$(ki)=a$(ki+1)
+11600             l=l+1
+11610          END IF
+11620          ki=CODE(a$(j))
+11630          IF ki<123 AND ki>96 THEN a$(j)=CHR$(ki-32)
+11640       END FOR j
+11650       a$=a$(1 TO lena-l)
+11660    END IF
+11670    alpha_sort$(count)=a$
+11680    count=count+1
+11690 END FOR i
+11700 do_sort$ alpha_sort$
+11710 END DEFine table_sort
+11720 :
+11730 DEFine PROCedure do_sort$(table$)
+11740 LOCal i,d,e,b,temp,temp$,j
+11750 LOCal sl1,sl2,sl3
+11760 i=1
+11770 REPeat sl1
+11780   IF 2^i>count+1 THEN EXIT sl1
+11790   i=i+1
+11800 END REPeat sl1
+11810 j=2^i-1
+11820 REPeat sl2
+11830    j=INT(j/2)
+11840    IF NOT j THEN EXIT sl2
+11850    b=1:d=count-j+1:i=b
+11860    REPeat sl3
+11870       e=i+j-1
+11880       IF table$(i-1)>table$(e)
+11890          temp$=table$(e):table$(e)=table$(i-1)
+11900          table$(i-1)=temp$
+11910          temp=sort_table%(e):sort_table%(e)=sort_table%(i-1)
+11920          sort_table%(i-1)=temp
+11930          i=i-j
+11940          IF i<1
+11950             b=b+1
+11960             IF b>d THEN EXIT sl3
+11970             i=b
+11980          END IF
+11990          NEXT sl3
+12000       END IF
+12010       b=b+1
+12020       IF b>d THEN EXIT sl3
+12030       i=b
+12040    END REPeat sl3
+12050 END REPeat sl2
+12060 END DEFine do_sort$
+12070 :
+12080 DEFine PROCedure start_pointer
+12090 LOCal i
+12100 OUTLN #0;512,256,0,0
+12110 WINDOW #0;512,44,0,212
+12120 DIM chan_stat%(max_chan,2),wdefs(max_chan),anchor%(1)
+12130 FOR i=stick_chan,sub_chan,table_chan,menu_chan:chan_stat%(i,0)=180:chan_stat%(i,1)=122
+12140 anchor%(0)=87:anchor%(1)=142
+12150 pointer_defs
+12160 clear_screen 1
+12170 END DEFine start_pointer
+12180 :
+12190 DEFine PROCedure pointer_defs
+12200 RESTORE 12220
+12210 tree_sprite=RD_SPRT
+12220 DATA 6,5,4
+12230 DATA '     wwwwww'
+12240 DATA '    waaaaaaw   '
+12250 DATA '   waggggggaw   '
+12260 DATA '   wagggggggggaw '
+12270 DATA '  waggggggggggaw '
+12280 DATA ' wagggggggagggggaw'
+12290 DATA 'wagggagggagggggaw'
+12300 DATA ' waggaagaggggaw  '
+12310 DATA '  waggaagggaw    '
+12320 DATA '     waaw        '
+12330 DATA '     waaw        '
+12340 DATA '    waaaaw       ',''
+12350 END DEFine pointer_defs
+12360 :
+12370 DEFine FuNction RD_SPRT
+12380   LOCal tmp_patt$(32,32)
+12390   LOCal xs,ys, xo,yo, md, l
+12400   xs=0:ys=-1:READ xo,yo,md
+12410   REPeat l
+12420     READ x$:IF x$='' THEN EXIT l
+12430     ys=ys+1:tmp_patt$(ys)=x$&FILL$(' ',32)
+12440     IF LEN(x$)>xs THEN xs=LEN(x$)
+12450   END REPeat l
+12460   l=ALCHP(SPRSP(xs,ys+1))
+12470   SPSET l,xo,yo,md,tmp_patt$(0 TO ys,1 TO xs)
+12480   RETurn l
+12490 END DEFine RD_SPRT
+12500 :
+12510 DEFine FuNction get_opt(no_close,num_options,options$,ncols,chan,lilist$,lirows,read_ptr)
+12520 LOCal get_item,event,i,j,length,a$,height,disp_cols
+12530 LOCal rownum,num_per_row,rowpos,nitems,lastcol,num_cols,newopts
+12540 LOCal swdef%(3),wdef%(3),apw(0),c%,d%,e%,opts,cols
+12550 LOCal max_height,b$
+12560 IF NOT read_ptr THEN lirows=0
+12570 length=1:nitems=0:opts=num_options:cols=ncols
+12580 FOR i=0 TO opts:IF LEN(options$(i))>length THEN length=LEN(options$(i))
+12590 IF lirows
+12600    nitems=DIMN(lilist$)-3:DIM lflag%(nitems+3),lsize%(nitems+3,1)
+12610    num_per_row=INT((nitems+1)/lirows)-1
+12620    menu_length=DIMN(lilist$,2)
+12630    wdef%(0)=(menu_length*6+4)*(num_per_row+1)+3+num_per_row*4
+12640    IF wdef%(0)<66 THEN wdef%(0)=66
+12650    lsize%(nitems+1,0)=wdef%(0)-46
+12660    lsize%(nitems+2,0)=20
+12670    lsize%(nitems+3,0)=22
+12680 END IF
+12690 lastcol=0:sk$='':arrows=0
+12700 SELect ON cols
+12710    =1:IF opts>screen_length-1-lirows THEN arrows=1
+12720    =opts+1:IF length*opts>72 THEN arrows=2
+12730    =-1:cols=INT((opts+1)*2/screen_length)+1
+12740        IF cols*length>72 THEN cols=INT((opts+2)/(screen_length))+1
+12750        IF cols*length>72 THEN arrows=2
+12760        FOR i=screen_length-1 TO 1 STEP -1
+12770           newopts=(INT(opts/cols)+1)*cols-1
+12780           IF newopts-opts<=10 OR cols<=10 THEN EXIT i
+12790           cols=INT((opts+2)/i)+1
+12800        END FOR i
+12810        opts=newopts
+12820 END SELect
+12830 num_per_col=INT(opts/cols)
+12840 DIM aflag%(num_per_col,cols-1),ct%(1,2)
+12850 SELect ON chan
+12860    =ft_chan,ft1_chan:FOR i=0 TO opts
+12870                IF (bar$ INSTR options$(i) AND NOT '_' INSTR options$(i)) OR 'No data' INSTR options$(i) OR '/' INSTR options$(i) OR ''=options$(i) THEN aflag%(i,0)=16
+12880             END FOR i
+12890             IF NOT aflag%(subject-1,0) THEN aflag%(subject-1,0)=128
+12900    =data_chan:FOR i=1 TO opts:aflag%(i,0)=16
+12910               aflag%(0,0)=128
+12920    =tree_chan:aflag%(9,1)=128
+12930    =stick_chan:wdef%(2)=10:wdef%(3)=30
+12940    =menu_chan:IF cols<>1 OR (NOT lirows AND NOT num_options) THEN set_anchor 256-((length+1)*(opts+1)*6+4)/2,240,menu_chan
+12950 END SELect
+12960 ct%(0,0)=1
+12970 num_cols=cols-1
+12980 IF NOT chan_stat%(chan,2)
+12990    DIM iattr(3,3)
+13000    iattr(0,0)=1
+13010    iattr(0,1)=colours%(chan,2)
+13020    iattr(2,0)=colours%(chan,0):iattr(1,0)=colours%(chan,0)
+13030    iattr(2,1)=colours%(chan,1):iattr(1,1)=colours%(chan,1)
+13040    iattr(3,0)=colours%(chan,1)
+13050    iattr(3,1)=colours%(chan,0)
+13060    DIM jus%(opts,1),type%(opts),strg$(opts,length),pspr(0),pblb(0),ppat(0),x_size%(num_cols,1),y_size%(num_per_col,1),se%(num_per_col,1)
+13070    FOR i=0 TO opts
+13080       jus%(i,0)=1
+13090       type%(i)=-256
+13100       a$=' '
+13110       FOR j=1 TO LEN(options$(i))
+13120          b$=options$(i,j)
+13130          IF CODE(b$)>=65 AND CODE(b$)<=90 THEN a$=b$:EXIT j
+13140       END FOR j
+13150       sk$=sk$&a$
+13160    END FOR i
+13170    FOR i=0 TO num_per_col
+13180       se%(i,0)=lastcol
+13190       lastcol=lastcol+cols
+13200       se%(i,1)=lastcol
+13210    END FOR i
+13220    FOR i=0 TO num_per_col:y_size%(i,0)=10:y_size%(i,1)=10
+13230    FOR i=0 TO num_cols:x_size%(i,0)=length*6+4:x_size%(i,1)=length*6+8
+13240    aolst=MK_AOL(iattr,jus%,sk$,type%,options$,pspr(0),pblb(0),ppat(0))
+13250    rwlst=MK_RWL(aolst,se%)
+13260    x_aslst=MK_ASL(x_size%)
+13270    y_aslst=MK_ASL(y_size%)
+13280    FOR disp_cols=cols TO 0 STEP -1
+13290       swdef%(0)=(length*6+4)*disp_cols+4+(disp_cols-1)*4
+13300       IF swdef%(0)<=480 THEN EXIT disp_cols
+13310    END FOR disp_cols
+13320    IF NOT disp_cols THEN er 'Cannot display data','':RETurn 0
+13330    max_height=screen_length-lirows-1
+13340    IF arrows=1 THEN max_height=max_height-1
+13350    height=num_per_col:IF height>max_height THEN height=max_height
+13360    swdef%(1)=(height+1)*10+2
+13370    DIM wattr%(3)
+13380    wattr%(0)=1
+13390    wattr%(1)=1
+13400    wattr%(2)=colours%(chan,1)
+13410    wattr%(3)=colours%(chan,0)
+13420    cdefx=0:cdefy=0:offx=0:offy=0
+13430    SELect ON arrows
+13440        =1:ct%(0,0)=1:ct%(1,2)=height+2:offy=6
+13450          cdefy=MK_CDEF(1,colours%(chan,2),colours%(chan,2),colours%(chan,2))
+13460          swdef%(1)=swdef%(1)+24
+13470       =2:ct%(0,0)=1:ct%(1,2)=disp_cols:offx=12
+13480          cdefx=MK_CDEF(1,colours%(chan,2),colours%(chan,2),colours%(chan,2))
+13490          swdef%(0)=swdef%(0)+24
+13500    END SELect
+13510    lilst=0
+13520    IF lirows
+13530       wdef%(1)=lirows*11+2+14
+13540       swdef%(3)=wdef%(1)
+13550       DIM org%(nitems+3,1),jus%(nitems+3,1),type%(nitems+3)
+13560       rownum=0
+13570       sk$='':rowpos=0
+13580       FOR i=0 TO nitems
+13590          type%(i)=-256:jus%(i,0)=1:sk$=sk$&lilist$(i,1)
+13600          lsize%(i,1)=10:lsize%(i,0)=menu_length*6+2
+13610          org%(i,0)=6*rowpos*(menu_length+1)+2*rowpos+2:org%(i,1)=14+1+rownum*11
+13620          rowpos=rowpos+1:IF rowpos>num_per_row THEN rowpos=0:rownum=rownum+1
+13630       END FOR i
+13640       FOR i=1 TO 3:type%(nitems+i)=-256:lsize%(nitems+i,1)=12:sk$=sk$&' '
+13650       DIM sprite(0)
+13660       type%(nitems+2)=-254:sprite(0)=6:lilist$(nitems+2)='ESC'
+13670       lsize%(nitems+2,0)=20
+13680       lsize%(nitems+3,0)=22
+13690       lsize%(nitems+1,0)=wdef%(0)-46
+13700       org%(nitems+1,0)=22:org%(nitems+1,1)=1
+13710       org%(nitems+2,0)=2:org%(nitems+2,1)=1
+13720       org%(nitems+3,0)=wdef%(0)-24:org%(nitems+3,1)=1:jus%(nitems+3,0)=1
+13730       IF arrows=1 THEN lsize%(nitems+1,0)=lsize%(nitems+1,0)+12:org%(nitems+3,0)=org%(nitems+3,0)+12
+13740       IF lsize%(nitems+1,0)<swdef%(0)-46 THEN lsize%(nitems+1,0)=swdef%(0)-46
+13750       IF org%(nitems+3,0)<swdef%(0)-24 THEN org%(nitems+3,0)=swdef%(0)-24
+13760       lilst=MK_LIL(iattr,lsize%,org%,jus%,sk$,type%,lilist$,sprite(0),0,0)
+13770    END IF
+13780    IF wdef%(0)<swdef%(0)
+13790       wdef%(0)=swdef%(0)
+13800    ELSE
+13810       offx=INT((wdef%(0)-swdef%(0))/2)
+13820       swdef%(0)=wdef%(0)
+13830    END IF
+13840    wdef%(1)=wdef%(1)+swdef%(1)
+13850    IF arrows=1 THEN wdef%(0)=wdef%(0)+10
+13860    IF arrows=2 THEN wdef%(1)=wdef%(1)+6
+13870    apw(0)=MK_APPW(swdef%,wattr%,0,CHR$(9),cdefx,cdefy,offx,offy,x_aslst,y_aslst,0,0,rwlst)
+13880    awlst=MK_AWL(apw)
+13890    IF lirows
+13900       wdefs(chan)=MK_WDEF(wdef%,wattr%,tree_sprite,lilst,0,awlst)
+13910       DR_PULD wdefs(chan),chan_stat%(chan,0),chan_stat%(chan,1),lflag%,aflag%,ct%
+13920       draw_header chan
+13930    ELSE
+13940       wdefs(chan)=MK_WDEF(wdef%,wattr%,tree_sprite,0,0,awlst)
+13950       DR_PULD wdefs(chan),chan_stat%(chan,0),chan_stat%(chan,1),aflag%,ct%
+13960    END IF
+13970    chan_stat%(chan,2)=1
+13980 END IF
+13990 IF NOT read_ptr THEN RETurn 0
+14000 REPeat get_item
+14010    IF lirows
+14020       RD_PTR wdefs(chan),item%,wind%,c%,d%,e%,lflag%,aflag%,ct%
+14030       IF item%=nitems+2 AND wind%=-1 THEN c%=8
+14040       IF item%=nitems+3 AND wind%=-1 THEN c%=2
+14050       IF item%=nitems+1 AND wind%=-1 THEN c%=16
+14060       IF wind%=-1 AND item%>=0 AND item%<=DIMN(lflag%) THEN lflag%(item%)=0
+14070       DR_LDRW wdefs(chan),lflag%
+14080       draw_header chan
+14090    ELSE
+14100       RD_PTR wdefs(chan),item%,wind%,c%,d%,e%,aflag%,ct%
+14110    END IF
+14120    event=c%
+14130    SELect ON event
+14140      =128,64,1:IF item%<>-1 THEN EXIT get_item
+14150      =8:CH_WIN wdefs(chan)
+14160      =4:shut chan:er 'Sorry, there is no on-line help','Please see the manual'
+14170         RETurn get_opt(no_close,num_options,options$,cols,chan,lilist$,lirows,read_ptr)
+14180      =2:IF lirows THEN item%=nitems:wind%=-1:EXIT get_item
+14190    END SELect
+14200 END REPeat get_item
+14210 IF no_close THEN anchor%(0)=chan_stat%(chan,0)+d%:anchor%(1)=chan_stat%(chan,1)+e%
+14220 IF item%>=0 AND item%<=DIMN(options$)
+14230    IF '½' INSTR options$(item%) THEN no_close=1
+14240 END IF
+14250 IF NOT no_close THEN shut chan
+14260 IF NOT wind% THEN wind%=1
+14270 IF wind%=-1 THEN item%=item%+1
+14280 RETurn item%*wind%
+14290 END DEFine get_opt
+14300 :
+14310 DEFine PROCedure init_menus
+14320 LOCal i,c$,q$,o$
+14330 DIM eve_menu$(4,5),pick_menu$(3,6),stick2_menu$(4,6),main_menu$(7,20),find_menu$(5,6),segments$(15,26),ok_menu$(3,3),sex_menu$(2,7),date_menu$(5,7),export_menu$(2,6),import_menu$(3,9),table_menu$(5,12)
+14340 q$='Quit':o$='OK':c$='Cancel'
+14350 RESTORE 14350
+14360 DATA q$,'Family names','Given names','Places','Comments','Sources'
+14370 FOR i=0 TO 5:READ table_menu$(i)
+14380 DATA q$,'Append','Merge','Overwrite'
+14390 FOR i=0 TO 3:READ import_menu$(i)
+14400 DATA 'All','Marked',q$
+14410 FOR i=0 TO 2:READ export_menu$(i)
+14420 DATA 'Exact','Circa','After','Before','Quarter','Invalid'
+14430 FOR i=0 TO 5:READ date_menu$(i)
+14440 DATA 'Male','Female','Unknown'
+14450 FOR i=0 TO 2:READ sex_menu$(i)
+14460 DATA 'Print',q$
+14470 FOR i=0 TO 1:READ eve_menu$(i)
+14480 DATA c$
+14490 READ pick_menu$(0)
+14500 DATA o$,c$
+14510 FOR i=0 TO 1:READ stick2_menu$(i)
+14520 DATA 'Quit','Convert to G3','Export to Archive','Import from Archive','Places to Easel','Tree to Abacus','cleanUp','export to Windows'
+14530 FOR i=0 TO 7:READ main_menu$(i)
+14540 DATA o$,'Pick',c$
+14550 FOR i=0 TO 2:READ find_menu$(i)
+14560 DATA 'Civil Register Births','Civil Register Marriages','Civil Register Deaths','Parish Register Baptisms','Parish Registers Marriages','Parish Registers Burials','Census Returns','Wills','IGI Baptisms','IGI Marriages','Monuments','Other Sources','Notes','Network','Events','Report'
+14570 FOR i=0 TO 15:READ segments$(i)
+14580 DATA o$
+14590 READ ok_menu$(0)
+14600 END DEFine init_menus
+14610 :
+14620 DEFine FuNction stick_up$(opt,prefix$,name$,length,type)
+14630 LOCal options$(0,length+LEN(prefix$)),k
+14640 set_anchor 0,0,stick_chan
+14650 options$(0)=prefix$&name$&FILL$(' ',length)
+14660 SELect ON opt
+14670    =0:k=get_opt(1,0,options$,1,stick_chan,ok_menu$,1,1)
+14680    =1:k=get_opt(1,0,options$,1,stick_chan,find_menu$,1,1)
+14690    =2:k=get_opt(1,0,options$,1,stick_chan,stick2_menu$,1,1)
+14700 END SELect
+14710 pick_field=0:a$=''
+14720 SELect ON k
+14730    =0:OPEN #stick_chan,'con_'
+14740       DR_AWDF #stick_chan,wdefs(stick_chan),0:set_colours stick_chan,1
+14750       AT #stick_chan,0,INT(offx/6):PRINT #stick_chan,prefix$
+14760       get_field length,stick_chan,0,LEN(prefix$)+INT(offx/6),type,name$
+14770       CLOSE #stick_chan
+14780    =-2:exit_flag=1:name$=''
+14790 END SELect
+14800 shut stick_chan
+14810 RETurn name$
+14820 END DEFine stick_up$
+14830 :
+14840 DEFine PROCedure point_window(x%,y%,chan,xsize%,ysize%)
+14850 LOCal wdef%(3),wattr%(3),xpos%,ypos%,apw(0),awlst
+14860 IF chan_stat%(chan,2) THEN RETurn
+14870 wattr%(0)=1
+14880 wattr%(1)=1
+14890 wattr%(2)=colours%(chan,1)
+14900 wattr%(3)=colours%(chan,0)
+14910 wdef%(0)=xsize%:wdef%(1)=ysize%
+14920 IF x%=-1 THEN xpos%=INT((512-xsize%)/2):ELSE xpos%=x%
+14930 IF y%=-1 THEN ypos%=INT((256-ysize%)/2):ELSE ypos%=y%
+14940 IF chan=back_chan THEN wattr%(0)=0
+14950 apw(0)=MK_APPW(wdef%,wattr%,0,'')
+14960 awlst=MK_AWL(apw)
+14970 wdefs(chan)=MK_WDEF(wdef%,wattr%,tree_sprite,0,0,awlst)
+14980 OPEN #chan,'con_'
+14990 DR_PULD wdefs(chan),xpos%,ypos%
+15000 DR_AWDF #chan,wdefs(chan),0
+15010 chan_stat%(chan,2)=2
+15020 set_colours chan,1
+15030 END DEFine point_window
+15040 :
+15050 :
+15060 DEFine PROCedure draw_header(chan)
+15070 LOCal i,xsize%
+15080 OPEN #head_chan,'scr_'
+15090 DR_LWDF #head_chan,wdefs(chan),nitems+1
+15100 xsize%=lsize%(nitems+1,0)
+15110 FOR i=0 TO 10 STEP 2:BLOCK #head_chan,xsize%-2,1,0,i,colours%(chan,1)
+15120 IF xsize%>=108
+15130    STRIP #head_chan,colours%(chan,0):INK #head_chan,colours%(chan,1)
+15140    AT #head_chan,0,INT(xsize%/12)-(LEN(chan_title$(chan))+7)/2-1:PRINT #head_chan,chan_title$(chan)&' Window'
+15150 END IF
+15160 CLOSE #head_chan
+15170 END DEFine draw_header
+15180 :
+15190 DEFine PROCedure shut(chan)
+15200 IF NOT chan_stat%(chan,2) THEN RETurn
+15210 DR_UNST wdefs(chan)
+15220 chan_stat%(chan,2)=0
+15230 END DEFine shut
+15240 :
+15250 DEFine PROCedure clear_screen(num)
+15260 point_window 0,0,back_chan,508,254
+15270 set_colours back_chan,num
+15280 FOR i=0 TO 10 STEP 2:BLOCK #back_chan,504,1,0,i,colours%(back_chan,2)
+15290 AT #back_chan,0,30:PRINT #back_chan,"Data Exchange V"&dex_ver$
+15300 END DEFine clear_screen
+15310 :
+15320 DEFine PROCedure set_anchor(x%,y%,chan)
+15330 IF x% AND y% THEN anchor%(0)=x%:anchor%(1)=y%
+15340 chan_stat%(chan,0)=anchor%(0)
+15350 chan_stat%(chan,1)=anchor%(1)
+15360 END DEFine set_anchor
+15370 :
+15380 DEFine PROCedure pwait
+15390 point_window -1,-1,err_chan,63,45
+15400 CIRCLE #err_chan,50,50,50
+15410 LINE #err_chan,0,50 TO 100,50
+15420 LINE #err_chan,50,0 TO 50,100
+15430 INK #err_chan,colours%(err_chan,0):FILL #err_chan,1
+15440 CIRCLE #err_chan,50,50,30
+15450 INK #err_chan,colours%(err_chan,2):FILL #err_chan,0
+15460 temp$=DATE$
+15470 hour=temp$(13 TO 14):min=temp$(16 TO 17)
+15480 IF hour>12 THEN hour=hour-12
+15490 hour=hour+min/60
+15500 min=RAD(min*6)
+15510 hour=RAD(hour*30)
+15520 LINE #err_chan,50,50 TO 50+SIN(min)*50,50+COS(min)*50
+15530 LINE #err_chan,50,50 TO 50+SIN(hour)*40,50+COS(hour)*40
+15540 END DEFine pwait
+15550 :
+15560 DEFine PROCedure qwindow(chan)
+15570 shut chan
+15580 CLOSE #chan
+15590 END DEFine qwindow
+15600 :
+15610 DEFine PROCedure set_table(sort_flag)
+15620 SELect ON sort_flag
+15630    =15:table_pos=surpos:table_max=surnum:table_len=len_sur
+15640    =16:table_pos=chrispos:table_max=chrisnum:table_len=len_chris
+15650    =17:table_pos=placepos:table_max=placenum:table_len=len_place
+15660    =18:table_pos=commentpos:table_max=commentnum:table_len=len_com
+15670    =19:table_pos=sourcepos:table_max=sourcenum:table_len=len_source
+15680 END SELect
+15690 END DEFine set_table
+15700 :
+15710 DEFine PROCedure QLG2_get_data
+15720 LOCal x,a$,b$,k,i,j,l,m
+15730 IF QLG2_get_file("Loading: Names file>",names_file$,1) THEN RETurn
+15740 next_num=1:offset=0
+15750 OPEN_IN #5,names_file$
+15760 header$='"ref_no","surname$","christian$","father","mother","yob","yod"'
+15770 REPeat headloop
+15780    INPUT #5,record$
+15790    IF "NAMES=" INSTR record$ THEN max_names=100+record$(7 TO)+offset
+15800    IF import_names>max_names THEN max_names=import_names
+15810    IF record$=header$ THEN EXIT headloop
+15820    IF EOF(#5) THEN er "Names file specified has incorrect format","":RETurn
+15830 END REPeat headloop
+15840 init_names
+15850 REPeat i_loop
+15860    IF EOF(#5) THEN EXIT i_loop
+15870    INPUT #5,record$
+15880    comma(1)="," INSTR record$
+15890    FOR j=1 TO 4
+15900       k=quotes(j-1)
+15910       quotes(j)='"' INSTR record$(k+1 TO)+k
+15920    END FOR j
+15930    comma(2)=quotes(2)+1
+15940    comma(3)=quotes(4)+1
+15950    FOR j=4 TO 7
+15960       k=comma(j-1)
+15970       comma(j)="," INSTR record$(k+1 TO)+k
+15980    END FOR j
+15990    IF comma(6)=comma(7) THEN comma(7)=LEN(record$)+1
+16000    i=record$(1 TO comma(1)-1)+offset
+16010    IF i>num_names THEN num_names=i
+16020    IF num_names>max_names
+16030       er "Import names limit exceeded, load aborted","Restart with more room"
+16040       m6 0,record$
+16050       num_names=max_names
+16060       EXIT i_loop
+16070    END IF
+16080    b$=record$(quotes(1)+1 TO quotes(2)-1)
+16090 REMark   names(i,5)=add_table%(surname_table$,sur_id%,surpos,surnum,b$,"SURNAME")
+16100 ftable%(i)=add_table%(surname_table$,sur_id%,b$,15)
+16110    a$=record$(quotes(3)+1 TO quotes(4)-1)
+16120 REMark   chris$(i)=a$:k=LEN(a$&b$)
+16130 gtable%(i)=add_table%(chris_table$,chris_id%,a$,16)
+16140 REMark   names(i,1)=record$(comma(3)+1 TO comma(4)-1)
+16150 fa%(i)=record$(comma(3)+1 TO comma(4)-1)
+16160 REMark   names(i,2)=record$(comma(4)+1 TO comma(5)-1)
+16170 ma%(i)=record$(comma(4)+1 TO comma(5)-1)
+16180 REMark names(i,3)=record$(comma(5)+1 TO comma(6)-1)
+16190 yofb(i)=record$(comma(5)+1 TO comma(6)-1)
+16200 IF yofb(i)>99 AND yofb(i)<1000 THEN yofb(i)=0
+16210 REMark names(i,4)=record$(comma(6)+1 TO comma(7)-1)
+16220 yofd%(i)=record$(comma(6)+1 TO comma(7)-1)
+16230 m6 i&' names converted'
+16240 END REPeat i_loop
+16250 CLOSE #5
+16260 qwindow stat_chan
+16270 num_edits=1
+16280 END DEFine QLG2_get_data
+16290 :
+16300 DEFine PROCedure export_net
+16310 LOCal x,header$,f$,g$
+16320 get_device(recs_dev$)
+16330 names_file$=dir$&'NET'&'_exp'
+16340 IF get_file("Export Names file TO >",names_file$,0) THEN RETurn
+16350 DELETE names_file$
+16360 OPEN_NEW #io_chan,names_file$
+16370 header$='"net_no","family$","given$","father","mother","yob","yod","markers$"'
+16380 PRINT #io_chan,header$
+16390       IF ma$<>''
+16400          FOR i=1 TO num_names
+16410             f$=lookup_table$(surname_table$,15,sur_id%,ftable%,i)
+16420             g$=lookup_table$(chris_table$,16,chris_id%,gtable%,i)
+16430             IF ma$ INSTR markers$(i,0) THEN PRINT #io_chan,i;',"';f$;'","';g$;'",';fa%(i);',';ma%(i);',';yofb(i);',';yofd%(i);',"';markers$(i,0);'"'
+16440          END FOR i
+16450       ELSE
+16460          FOR i=1 TO num_names
+16470             f$=lookup_table$(surname_table$,15,sur_id%,ftable%,i)
+16480             g$=lookup_table$(chris_table$,16,chris_id%,gtable%,i)
+16490             PRINT #io_chan,i;',"';f$;'","';g$;'",';fa%(i);',';ma%(i);',';yofb(i);',';yofd%(i);',"';markers$(i,0);'"'
+16500          END FOR i
+16510       END IF
+16520 CLOSE #io_chan
+16530 num_edits=0
+16540 END DEFine export_net
+16550 :
+16560 DEFine PROCedure QLG2_get_notes
+16570 LOCal x,header$,i,j,m,d,a$
+16580 LOCal curnot$
+16590 IF NOT num_names THEN RETurn
+16600 IF QLG2_get_file("Loading: Notes file>",notes_file$,1) THEN RETurn
+16610 OPEN_IN #5,notes_file$
+16620 INPUT #5,record$
+16630 header$='"type","year","date","ref_no","note$"'
+16640 REMark check removed as hard disk directories not accounted for
+16650 REMark get_device(record$):a$=file$
+16660 REMark get_device(names_file$)
+16670 IF record$<>header$
+16680    INPUT #5,record$
+16690    IF "NOTES=" INSTR record$ THEN max_notes=100+record$(7 TO)
+16700    IF import_notes>max_notes THEN max_notes=import_notes
+16710    QLG2_init_notes(0)
+16720    INPUT #5,record$
+16730    IF record$<>header$
+16740       er "Notes file specified has incorrect format",""
+16750       exit_flag=1:RETurn
+16760    END IF
+16770 REMark ELSE
+16780 REMark     IF record$<>header$
+16790 REMark        er 'Notes file does not match loaded names file',''
+16800 REMark        exit_flag=1:RETurn
+16810 REMark     END IF
+16820 END IF
+16830 num_notes=0:note_edits=0
+16840 max_recs=max_notes:init_recs
+16850 REPeat note_loop
+16860    IF EOF(#5) THEN EXIT note_loop
+16870       INPUT #5,record$
+16880       comma(1)="," INSTR record$
+16890       FOR j=2 TO 4
+16900          comma(j)="," INSTR record$(comma(j-1)+1 TO)+comma(j-1)
+16910       END FOR j
+16920       x=LEN(record$)-1
+16930       curnot$=record$(comma(4)+2 TO x)
+16940       IF LEN(curnot$)>3
+16950          FOR j=1 TO 12
+16960             IF curnot$(1 TO 3)=file_type$(j) THEN NEXT note_loop
+16970          END FOR j
+16980       END IF
+16990       num_notes=num_notes+1
+17000       IF num_notes>max_notes
+17010          er "Maximum notes limit exceeded, load aborted","Restart with more room"
+17020          STOP
+17030       END IF
+17040 REMark      notes$(num_notes)=record$(comma(4)+2 TO x)
+17050 rec_ctable%(num_notes)=add_table%(comment_table$,com_id%,curnot$,18)
+17060 REMark      notes(num_notes,0)=record$(1 TO comma(1)-1)
+17070 rec_type%(num_notes)=record$(1 TO comma(1)-1)
+17080 REMark      notes(num_notes,1)=record$(comma(1)+1 TO comma(2)-1)
+17090 i=record$(comma(1)+1 TO comma(2)-1)
+17100 REMark      notes(num_notes,2)=record$(comma(3)+1 TO comma(4)-1)
+17110 rec_ref%(num_notes)=record$(comma(3)+1 TO comma(4)-1)
+17120       x=record$(comma(2)+1 TO comma(3)-1)
+17130       m=INT(x/100)*50:d=x-m*2
+17140 REMark      notes(num_notes,1)=notes(num_notes,1)*1000+m+d
+17150 rec_date(num_notes)=i*1000+m+d
+17160 REMark       names(notes(num_notes,2),6)=names(notes(num_notes,2),6)+1
+17170 rec_id%(num_notes)=num_notes:rec_stamp(num_notes)=DATE:rec_file%(num_notes)=20
+17180 rec_relate%(num_notes)=1
+17190 IF rec_ref%(num_notes)<=num_names
+17200    rec_ftable%(num_notes)=ftable%(rec_ref%(num_notes))
+17210    rec_gtable%(num_notes)=gtable%(rec_ref%(num_notes))
+17220    rec_relate%(num_notes)=sex%(rec_ref%(num_notes))*100+1
+17230 END IF
+17240 m6 num_notes&' notes converted'
+17250 END REPeat note_loop
+17260 qwindow stat_chan
+17270 CLOSE #5
+17280 num_recs=num_notes
+17290 rec_edits=1:file_type=20
+17300 recs_file$=recs_dev$&file_type$(20)
+17310 END DEFine QLG2_get_notes
+17320 :
+17330 DEFine PROCedure QLG2_load_records(num,selective)
+17340 LOCal count_refs,ic,x,header$,a$
+17350 LOCal i,j,m,d,file$,c$,s$
+17360 IF NOT num THEN RETurn
+17370 file$=QLG2_recs_dev$&file_type$(num):exit_flag=0
+17380 IF file$=recs_file$ AND NOT selective AND modify THEN RETurn
+17390 sort_length=0:recs_file$=file$
+17400 IF NOT selective THEN modify=1
+17410 OPEN_IN #5,recs_file$
+17420 INPUT #5,record$
+17430 IF record$='"limits"'
+17440    INPUT #5,record$
+17450    ic=',' INSTR record$
+17460    IF selective<>1 THEN max_recs=100+record$(1 TO ic-1)
+17470    IF selective<>1 AND selective<>3 THEN init_recs
+17480    i=',' INSTR record$(ic+1 TO)+ic
+17490    num_refs=record$(i+1 TO)
+17500    count_refs=0
+17510    IF selective>=2 AND num_refs<1 THEN CLOSE #5:RETurn
+17520    FOR i=0 TO 6:INPUT #5,record$
+17530 ELSE
+17540    max_recs=import_recs:init_recs
+17550 END IF
+17560 header$='"sur$","chris$","record","file_type","date","xref","stamp","type","ref_no","place$","comment$","source$"'
+17570 IF NOT header$ INSTR record$
+17580    er "Records file specified has incorrect format",""
+17590    exit_flag=1:CLOSE #5:RETurn
+17600 END IF
+17610 QLG2_nonselect_load
+17620 rec_edits=1
+17630 CLOSE #5
+17640 END DEFine QLG2_load_records
+17650 :
+17660 DEFine PROCedure export_recs
+17670 LOCal i,header$,record$,s$,c$,f$,g$,p$
+17680 LOCal j
+17690 IF NOT num_recs THEN RETurn
+17700 get_device(recs_dev$)
+17710 exp_file$=dir$&file_type$(file_type)&'_exp'
+17720 IF get_file("Export "&file_type$(file_type)&" TO file>",exp_file$,0) THEN RETurn
+17730 file$=exp_file$
+17740 DELETE file$
+17750 OPEN_NEW #io_chan,file$
+17760 header$='"family$","given$","recordid","file_type$","date$","xref","event_type$","net_no","place$","comment$","source$","grid_ref$","county$","relate$","relate","exdate","date"'
+17770 PRINT #io_chan,header$
+17780 FOR i=1 TO num_recs
+17790    IF rec_id%(i)
+17800       f$=lookup_table$(surname_table$,15,sur_id%,rec_ftable%,i)
+17810       g$=lookup_table$(chris_table$,16,chris_id%,rec_gtable%,i)
+17820       p$=lookup_table$(place_table$,17,place_id%,rec_ptable%,i)
+17830       c$=lookup_table$(comment_table$,18,com_id%,rec_ctable%,i)
+17840       s$=lookup_table$(source_table$,19,source_id%,rec_stable%,i)
+17850       j=INARRAY%(place_table$,0,p$)
+17860       IF j<0 THEN j=0
+17870       record$='"'&f$&'","'&g$&'",'&rec_id%(i)&',"'&file_type$(rec_file%(i))&'","'&condat$(rec_exdate%(i),rec_date(i))&'",'&rec_link%(i)&',"'&note_type$(rec_type%(i))&'",'&rec_ref%(i)&',"'&p$&'","'&c$&'","'&s$&'","'&get_grid$(j)&'","'&county$(county_table%(j))&'","'&relationship$(rec_relate%(i))&'",'&rec_relate%(i)&','&rec_exdate%(i)&','&rec_date(i)
+17880       PRINT #io_chan,record$
+17890    END IF
+17900 END FOR i
+17910 CLOSE #io_chan
+17920 END DEFine export_recs
+17930 :
+17940 DEFine PROCedure QLG2_nonselect_load
+17950 LOCal a$,c$,s$
+17960 REPeat nrec_loop
+17970    IF EOF(#5) THEN EXIT nrec_loop
+17980    INPUT #5,record$
+17990    IF record$(LEN(record$))='~'
+18000       INPUT #5,a$
+18010       record$=record$(1 TO LEN(record$)-1)&a$
+18020    END IF
+18030    record$=record$&',"0"'
+18040    QLG2_put_commas
+18050    num_recs=num_recs+1
+18060    IF num_recs>max_recs
+18070       er "Maximum Records limit reached, load ended",''
+18080       num_recs=max_recs
+18090       exit_flag=1:RETurn
+18100    END IF
+18110    c$=record$(quotes(3)+1 TO quotes(4)-1)
+18120 REMark    rec_chris$(num_recs)=c$
+18130 rec_gtable%(num_recs)=add_table%(chris_table$,chris_id%,c$,16)
+18140    s$=record$(quotes(1)+1 TO quotes(2)-1)
+18150 REMark recs(num_recs,7)=add_table%(surname_table$,sur_id%,surpos,surnum,s$,"SURNAME")
+18160 rec_ftable%(num_recs)=add_table%(surname_table$,sur_id%,s$,15)
+18170    i=LEN(c$&s$)+1
+18180    IF i>sort_length THEN sort_length=i
+18190 REMark   FOR j=0 TO 6:recs(num_recs,j)=record$(comma(j+1)+1 TO comma(j+2)-1)
+18200 FOR j=0 TO 6
+18210    ii=record$(comma(j+1)+1 TO comma(j+2)-1)
+18220    SELect ON j
+18230       =0:rec_id%(num_recs)=ii
+18240       =1:rec_file%(num_recs)=ii
+18250       =2:rec_date(num_recs)=ii
+18260       =3:rec_link%(num_recs)=ii
+18270       =4:rec_stamp(num_recs)=ii
+18280       =5:rec_type%(num_recs)=ii
+18290       =6:rec_ref%(num_recs)=ii
+18300    END SELect
+18310 END FOR j
+18320 REMark   recs(num_recs,9)=add_table%(place_table$,place_id%,placepos,placenum,record$(quotes(5)+1 TO quotes(6)-1),"PLACE")
+18330 rec_ptable%(num_recs)=add_table%(place_table$,place_id%,record$(quotes(5)+1 TO quotes(6)-1),17)
+18340 REMark   recs(num_recs,10)=add_table%(comment_table$,com_id%,commentpos,commentnum,record$(quotes(7)+1 TO quotes(8)-1),"COMMENT")
+18350 rec_ctable%(num_recs)=add_table%(comment_table$,com_id%,record$(quotes(7)+1 TO quotes(8)-1),18)
+18360 REMark   recs(num_recs,8)=add_table%(source_table$,source_id%,sourcepos,sourcenum,record$(quotes(9)+1 TO quotes(10)-1),"SOURCE REF")
+18370 rec_stable%(num_recs)=add_table%(source_table$,source_id%,record$(quotes(9)+1 TO quotes(10)-1),19)
+18380    j=record$(quotes(11)+1 TO quotes(12)-1)
+18390    grid_table(rec_ptable%(num_recs))=j
+18400 m6 num_recs&' '&file_type$(file_type)&' records converted'
+18410 END REPeat nrec_loop
+18420 qwindow stat_chan
+18430 END DEFine QLG2_nonselect_load
+18440 :
+18450 DEFine PROCedure export_tree
+18460 LOCal record$,i$,i,j
+18470 get_device(recs_dev$)
+18480 exp_file$=dir$&'tree'&current_tree&'_exp'
+18490 m6 "Export Tree for "&full_name$(current_tree)
+18500 IF get_file("Export Tree to:",exp_file$,0) THEN qwindow stat_chan:RETurn
+18510 qwindow stat_chan
+18520 DELETE exp_file$
+18530 OPEN_NEW #io_chan,exp_file$
+18540 FOR i=1 TO max_level
+18550    record$=''
+18560    FOR j=min_size TO max_size
+18570       i$=slot$(i,j,1)
+18580       IF i$<>blanks$ AND i$(1)=' ' THEN i$(1)="|"
+18590       record$=record$&'"'&i$&'",'
+18600    END FOR j
+18610    PRINT #io_chan,record$(1 TO LEN(record$)-1)
+18620 END  FOR i
+18630 CLOSE #io_chan
+18640 END DEFine export_tree
+18650 :
+18660 DEFine PROCedure export_places
+18670 LOCal i,j
+18680 IF NOT time_dist THEN RETurn
+18690 m6 'Select place to export'
+18700 m$=PICK_table$(place_table$,len_place,placepos,'')
+18710 qwindow stat_chan
+18720 origin=pick_num
+18730 get_device(recs_dev$)
+18740 exp_file$=dir$&'place_exp'
+18750 IF get_file("Export to >",exp_file$,0) THEN RETurn
+18760 FOR i=1 TO LEN(m$):IF NOT m$(i) INSTR 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890' THEN m$(i)='_'
+18770 DELETE exp_file$
+18780 OPEN_NEW #io_chan,exp_file$
+18790 PRINT #io_chan,'"label$","';m$;'"'
+18800 FOR i=from_date TO to_date STEP time_inc
+18810    PRINT #io_chan,'"';i;'",';time_span%(origin,(i-from_date)/time_inc)
+18820 END FOR i
+18830 CLOSE #io_chan
+18840 END DEFine export_places
+18850 :
+18860 DEFine PROCedure QLG2_get_markers
+18870 LOCal a$,j,k,record$,i,l
+18880 IF QLG2_get_file("Loading: Markers file>",mark_file$,1) THEN RETurn
+18890 OPEN_IN #5,mark_file$
+18900 INPUT #5,record$
+18910 REMark get_device(record$):a$=file$
+18920 REMark get_device(names_file$)
+18930 REMark IF a$<>file$
+18940 REMark    CLOSE #5
+18950 REMark    er 'Marker file does not match names file currently loaded','':RETurn
+18960 REMark END IF
+18970 REMark FOR i=8 TO 15:INPUT #5,char_text$(i)
+18980 FOR i=0 TO 7:INPUT #5,char_text$(i)
+18990 REPeat mloop
+19000    IF EOF(#5) THEN EXIT mloop
+19010    INPUT #5,record$
+19020    j=',' INSTR record$
+19030    k=record$(1 TO j-1)
+19040 REMark   IF k<=num_names THEN names(k,7)=record$(j+1 TO)
+19050 i=record$(j+1 TO)
+19060 l=0
+19070 IF i>32767 THEN i=i-32768:l=128
+19080 IF i>=256
+19090    FOR j=8 TO 14
+19100       IF 2^j&&i THEN l=l+2^(j-8)
+19110    END FOR j
+19120 END IF
+19130 IF k<=num_names THEN user_mark%(k)=l
+19140 END REPeat mloop
+19150 CLOSE #5
+19160 END DEFine QLG2_get_markers
+19170 :
+19180 DEFine PROCedure qlg2to3
+19190 LOCal i,ftype
+19200 room=stick_up$(0,'Space:',room,4,1)
+19210 chrisnum=room
+19220 import_notes=room
+19230 QLG2_recsdev
+19240 QLG2_redim
+19250 QLG2_get_params
+19260 QLG2_get_data
+19270 QLG2_get_markers
+19280 recsdev DATAD$
+19290 IF QLG2_exists%(0) THEN DELETE recs_dev$&'ASF':COPY QLG2_recs_dev$&'ASF' TO recs_dev$&'ASF'
+19300 county_file$='flp2_G3_COU'
+19310 IF NOT get_file("Counties file>",county_file$,1)
+19320    DELETE recs_dev$&'COU':COPY county_file$ TO recs_dev$&'COU'
+19330 END IF
+19340 IF num_names THEN add_gender:save_recs
+19350 QLG2_get_notes
+19360 IF num_notes THEN save_recs
+19370 QLG2_check_files
+19380 recs_file$=''
+19390 FOR ftype=1 TO 12
+19400    file_type=ftype
+19410    IF QLG2_exists%(file_type)
+19420       check_files
+19430       num_recs=0
+19440       FOR i=15 TO 19:load_table i
+19450       QLG2_load_records file_type,0
+19460       IF num_recs THEN modify_data:save_recs
+19470       IF exit_flag
+19480          IF warn('Do you want to resume conversion?','','Resume') THEN EXIT ftype
+19490       END IF
+19500    END IF
+19510 END FOR ftype
+19520 END DEFine qlg2to3
+19530 :
+19540 DEFine PROCedure QLG2_redim
+19550 LOCal i
+19560 max_notes=1000:len_note=50:num_notes=0
+19570 next_num=1:num_names=0:diff=0:max=0
+19580 num_edits=0:note_edits=0:person=0:p1=0:current_view=0:sort_length=1:max_size=0
+19590 current_tree=0
+19600 END DEFine QLG2_redim
+19610 :
+19620 DEFine PROCedure QLG2_recsdev
+19630 LOCal device$,r$
+19640 device$='flp1_'
+19650 r$=stick_up$(0,"Device for OLD QLG data:>",device$,40,0)
+19660 IF r$<>'' THEN device$=r$
+19670 IF device$(LEN(device$))<>"_" THEN device$=device$&"_"
+19680 expo_file$=device$&'family_exp'
+19690 tree_file$=device$&'family_tree':mark_file$=device$&'family_markers'
+19700 names_file$=device$&'family_names'
+19710 notes_file$=device$&'family_notes'
+19720 list_file$=device$&'list'
+19730 QLG2_recs_dev$=device$&"qlg_"
+19740 END DEFine QLG2_recsdev
+19750 :
+19760 DEFine PROCedure QLG2_get_params
+19770 LOCal j,spare
+19780 QLG2_check_files
+19790 IF QLG2_exists%(13)
+19800 m6 'Loading old configuration'
+19810 OPEN_IN #5,QLG2_recs_dev$&'CON'
+19820 INPUT #5,record$
+19830 IF record$<>'"params"' THEN CLOSE #5:RETurn
+19840 INPUT #5,record$
+19850 FOR j=1 TO 7:comma(j)="," INSTR record$(comma(j-1)+1 TO)+comma(j-1)
+19860 units=record$(1 TO comma(1)-1)
+19870 IF units=1 THEN units$='km':ELSE units=1.609:units$='miles'
+19880 stat_paper=record$(comma(1)+1 TO comma(2)-1)
+19890 stat_ink=record$(comma(2)+1 TO comma(3)-1)
+19900 nwidth=record$(comma(4)+1 TO comma(5)-1)
+19910 cond_width=record$(comma(5)+1 TO comma(6)-1)
+19920 slot=record$(comma(6)+1 TO)
+19930 blanks$=FILL$(' ',slot)
+19940 INPUT #5,record$
+19950 FOR j=1 TO 7:comma(j)="," INSTR record$(comma(j-1)+1 TO)+comma(j-1)
+19960 import_names=record$(1 TO comma(1)-1)
+19970 max_names=import_names
+19980 max_child=record$(comma(1)+1 TO comma(2)-1)
+19990 len_chris=record$(comma(2)+1 TO comma(3)-1)
+20000 len_sur=record$(comma(3)+1 TO comma(4)-1)
+20010 top_margin=record$(comma(4)+1 TO comma(5)-1)
+20020 bottom_margin=record$(comma(5)+1 TO comma(6)-1)
+20030 page_length=record$(comma(6)+1 TO)
+20040 INPUT #5,record$
+20050 FOR j=1 TO 7:comma(j)="," INSTR record$(comma(j-1)+1 TO)+comma(j-1)
+20060 paper_col=record$(1 TO comma(1)-1)
+20070 ink_col=record$(comma(1)+1 TO comma(2)-1)
+20080 sys_paper=record$(comma(2)+1 TO comma(3)-1)
+20090 sys_ink=record$(comma(3)+1 TO comma(4)-1)
+20100 IF NOT stat_ink AND NOT stat_paper THEN stat_paper=sys_paper:stat_ink=sys_ink
+20110 column$=record$(comma(4)+1 TO comma(5)-1)
+20120 max_views=record$(comma(5)+1 TO)
+20130 INPUT #5,record$
+20140 FOR j=1 TO 7:comma(j)="," INSTR record$(comma(j-1)+1 TO)+comma(j-1)
+20150 print_dev$=record$(1 TO comma(1)-1)
+20160 notes_file$=record$(comma(1)+1 TO comma(2)-1)
+20170 list_file$=record$(comma(2)+1 TO comma(3)-1)
+20180 import_notes=record$(comma(3)+1 TO comma(4)-1)
+20190 max_notes=import_notes
+20200 len_note=record$(comma(4)+1 TO)
+20210 IF NOT EOF(#5) THEN INPUT #5,record$
+20220 IF record$='"params2"'
+20230    INPUT #5,record$
+20240    FOR j=1 TO 7:comma(j)="," INSTR record$(comma(j-1)+1 TO)+comma(j-1)
+20250    len_com=record$(1 TO comma(1)-1)
+20260    len_place=record$(comma(1)+1 TO comma(2)-1)
+20270    len_source=record$(comma(2)+1 TO comma(3)-1)
+20280    surnum=record$(comma(3)+1 TO comma(4)-1)
+20290    placenum=record$(comma(4)+1 TO comma(5)-1)
+20300    commentnum=record$(comma(5)+1 TO comma(6)-1)
+20310    sourcenum=record$(comma(6)+1 TO)
+20320    INPUT #5,expo_file$
+20330    INPUT #5,tree_file$
+20340    INPUT #5,mark_file$
+20350    INPUT #5,names_file$
+20360    INPUT #5,import_recs
+20370    INPUT #5,lm
+20380    INPUT #5,baud_rate
+20390    IF baud_rate THEN BAUD baud_rate
+20400    INPUT #5,tol
+20410    INPUT #5,reverse_names:IF reverse_names THEN reverse_names$='yes'
+20420    INPUT #5,reverse:IF reverse THEN reverse$='yes'
+20430    INPUT #5,reduce$
+20440    INPUT #5,reduce_off$
+20450    INPUT #5,enlarge$
+20460    INPUT #5,enlarge_off$
+20470    INPUT #5,preamble$
+20480    INPUT #5,postamble$
+20490    INPUT #5,tof$
+20500    INPUT #5,eol_char$
+20510    INPUT #5,mar_char$
+20520    INPUT #5,bar$
+20530 END IF
+20540 IF len_note>len_com THEN len_com=len_note
+20550 CLOSE #5
+20560 qwindow stat_chan
+20570 END IF
+20580 IF (room+100)>commentnum THEN commentnum=room+100
+20590 dim_tables
+20600 END DEFine QLG2_get_params
+20610 :
+20620 DEFine PROCedure QLG2_put_commas
+20630 quotes(1)='"' INSTR record$
+20640 FOR j=2 TO 12:quotes(j)='"' INSTR record$(quotes(j-1)+1 TO)+quotes(j-1)
+20650 comma(1)="," INSTR record$(quotes(4) TO)+quotes(4)-1
+20660 FOR j=2 TO 9:comma(j)="," INSTR record$(comma(j-1)+1 TO)+comma(j-1)
+20670 END DEFine QLG2_put_commas
+20680 :
+20690 DEFine PROCedure QLG2_init_notes(force)
+20700 LOCal i
+20710 IF num_notes<1 OR NOT force
+20720    num_notes=0
+20730    DIM notes(max_notes,2),notes$(max_notes,len_note)
+20740 END IF
+20750 END DEFine QLG2_init_notes
+20760 :
+20770 DEFine FuNction get_file(message$,x$,num)
+20780 LOCal a$,dir_loop
+20790 REPeat dir_loop
+20800    exit_flag=0
+20810    x$=stick_up$(2,message$,x$,40,0)
+20820    IF exit_flag THEN EXIT dir_loop
+20830    get_device(x$)
+20840    get_directory x$
+20850    IF NOT check_dir(file$,num,1) THEN EXIT dir_loop
+20860 END REPeat dir_loop
+20870 DELETE recs_dev$&'tmp'
+20880 RETurn exit_flag
+20890 END DEFine get_file
+20900 :
+20910 DEFine PROCedure add_gender
+20920 LOCal i
+20930 FOR i=1 TO num_names
+20940    IF ABS(fa%(i)) THEN mark fa%(i),2
+20950    IF ABS(ma%(i)) THEN mark ma%(i),6
+20960 END FOR i
+20970 END DEFine add_gender
+20980 :
+20990 DEFine PROCedure mark(k,num)
+21000 LOCal l
+21010 l=ABS(k)
+21020 IF NOT (2^num&&mark%(l)) THEN mark%(l)=mark%(l)+2^num
+21030 END DEFine mark
+21040 :
+21050 DEFine FuNction slot$(i,j,c)
+21060 LOCal record$,dash$,h,m$,x,x$,dash2$
+21070 IF i>max_level OR i<0 THEN RETurn blanks$
+21080 IF j>max_size OR j<min_size THEN RETurn blanks$
+21090 SELect ON c
+21100    =1:dash$=" ":IF grid%(i,j,0)<0 AND i<>1 THEN dash$="_"
+21110       dash2$=" "
+21120    =-1:dash2$=" ":IF grid%(i,j-1,0)<0 AND i<>1 THEN dash2$="_"
+21130        dash$=" "
+21140 END SELect
+21150 g=ABS(grid%(i,j,0))
+21160 h=grid%(i,j,1)
+21170 SELect ON h
+21180    =0 TO 4:record$=" "
+21190    =5 TO 9:record$=bar$
+21200    =10 TO 14:record$="."
+21210    =15:record$=''
+21220    =REMAINDER :record$="*"
+21230 END SELect
+21240 SELect ON h
+21250    =0,5,10:record$=record$&blanks$(1 TO slot-1)
+21260    =3,8,13:record$=record$&"      "&mar_char$&FILL$("-",slot-8)
+21270            IF i=max_level THEN record$(slot)=">"
+21280    =1,6,11:x$=markers$(g,8):IF x$<>'' THEN x$=x$&' '
+21290            m$=dash$&x$&lookup_table$(chris_table$,16,chris_id%,gtable%,g)&blanks$
+21300        IF LEN(x$&lookup_table$(chris_table$,16,chris_id%,gtable%,g))>slot-2 THEN m$(slot-1)="."
+21310        record$=record$&m$(1 TO slot-1)
+21320    =2,7,12:m$=dash2$&lookup_table$(surname_table$,15,sur_id%,ftable%,g)&blanks$
+21330        x=LEN(lookup_table$(surname_table$,15,sur_id%,ftable%,g))+2:IF x>slot-12 THEN x=slot-12
+21340        d$=dates$(g):ld=LEN(d$)
+21350        IF ld THEN m$(x TO x+11)=d$
+21360        IF LEN(lookup_table$(surname_table$,15,sur_id%,ftable%,g))>slot-ld-2 THEN m$(slot-ld)='.'
+21370        record$=record$&m$(1 TO slot-1)
+21380    =4,9,14:record$=record$&"      "&mar_char$&blanks$(1 TO slot-8)
+21390    =15:record$=tree_edit$(g)&FILL$(' ',slot-LEN(tree_edit$(g)))
+21400    =REMAINDER :record$=record$&FILL$("*",slot-1)
+21410 END SELect
+21420 RETurn record$
+21430 END DEFine slot$
+21440 :
+21450 DEFine FuNction markers$(p,q)
+21460 LOCal ii,jj,count
+21470 IF NOT p OR ABS(p)>num_names THEN RETurn ''
+21480 mark$=''
+21490 IF NOT q
+21500    jj=mark%(ABS(p))
+21510    IF jj AND NOT nomarks
+21520       FOR ii=0 TO 14:IF 2^ii&&jj THEN mark$=mark$&char$(ii+1)
+21530    END IF
+21540 END IF
+21550 jj=user_mark%(ABS(p))
+21560 IF jj AND NOT nomarks
+21570    FOR ii=0 TO 14:IF 2^ii&&jj THEN mark$=mark$&user_char$(ii+1)
+21580 END IF
+21590 RETurn mark$
+21600 END DEFine markers$
+21610 :
+21620 DEFine FuNction get_grid$(gr)
+21630 LOCal ji,grid_num$,east,north,num
+21640 IF gr>placenum THEN RETurn '      '
+21650 num=grid_table(gr):grid_num$=num
+21660 IF num=0 THEN RETurn '      '
+21670 grid_ref$='      '
+21680 FOR ji=2,3:grid_ref$(ji+1)=grid_num$(ji)
+21690 FOR ji=5,6:grid_ref$(ji)=grid_num$(ji)
+21700 east=INT(num/100000):north=INT((num-(INT(num/1000)*1000))/100)
+21710 SELect ON north
+21720   =0 TO 4:IF east<5 THEN grid_ref$(1)='S':ELSE grid_ref$(1)='T'
+21730   =5 TO 9:grid_ref$(1)='N'
+21740 END SELect
+21750 SELect ON east
+21760   =0,5:SELect ON north
+21770      =0,5:grid_ref$(2)='V'
+21780      =1,6:grid_ref$(2)='Q'
+21790      =2,7:grid_ref$(2)='L'
+21800      =3,8:grid_ref$(2)='F'
+21810      =4,9:grid_ref$(2)='A'
+21820      END SELect
+21830   =1,6:SELect ON north
+21840      =0,5:grid_ref$(2)='W'
+21850      =1,6:grid_ref$(2)='R'
+21860      =2,7:grid_ref$(2)='M'
+21870      =3,8:grid_ref$(2)='G'
+21880      =4,9:grid_ref$(2)='B'
+21890      END SELect
+21900   =2:SELect ON north
+21910      =0,5:grid_ref$(2)='X'
+21920      =1,6:grid_ref$(2)='S'
+21930      =2,7:grid_ref$(2)='N'
+21940      =3,8:grid_ref$(2)='H'
+21950      =4,9:grid_ref$(2)='C'
+21960      END SELect
+21970   =3:SELect ON north
+21980      =0,5:grid_ref$(2)='Y'
+21990      =1,6:grid_ref$(2)='T'
+22000      =2,7:grid_ref$(2)='O'
+22010      =3,8:grid_ref$(2)='J'
+22020      =4,9:grid_ref$(2)='D'
+22030      END SELect
+22040   =4:SELect ON north
+22050      =0,5:grid_ref$(2)='Z'
+22060      =1,6:grid_ref$(2)='U'
+22070      =2,7:grid_ref$(2)='P'
+22080      =3,8:grid_ref$(2)='K'
+22090      =4,9:grid_ref$(2)='E'
+22100      END SELect
+22110 END SELect
+22120 RETurn grid_ref$
+22130 END DEFine get_grid$
+22140 :
+22150 DEFine FuNction time_dist
+22160 LOCal i,j,k
+22170 IF NOT num_recs THEN RETurn 0
+22180 time_inc=stick_up$(0,'Interval (years):',time_inc,2,1)
+22190 m=0
+22200 to_date=INT(rec_date(num_recs)/1000)
+22210 from_date=INT(rec_date(1)/1000)
+22220 i=INT((to_date-from_date)/time_inc)+1
+22230 IF i<0 THEN RETurn 0
+22240 DIM time_span%(placepos,i)
+22250 m6 "Events:      Year:"
+22260 FOR i=1 TO num_recs
+22270    j=rec_ptable%(i)
+22280    IF j
+22290       d$=condat$(rec_exdate%(i),rec_date(i))
+22300       IF con_y>=from_date AND con_y<=to_date
+22310          k=(INT(con_y/time_inc)*time_inc-from_date)/time_inc
+22320          time_span%(j,k)=time_span%(j,k)+1
+22330          m=m+1:m6 '      '&m&'      '&con_y
+22340       END IF
+22350    END IF
+22360 END FOR i
+22370 qwindow stat_chan
+22380 RETurn m
+22390 END DEFine time_dist
+22400 :
+22410 DEFine PROCedure modify_data
+22420 LOCal i,oldi,j,a$,g$,la,b$
+22430 IF NOT num_recs THEN RETurn
+22440 FOR i=1 TO commentpos
+22450    IF "FILE=" INSTR comment_table$(i)=1
+22460       comment_table$(i,1 TO 5)='TEXT='
+22470    END IF
+22480 END FOR i
+22490 FOR i=1 TO num_recs
+22500    IF 'M' INSTR markers$(rec_ref%(i),0) THEN rec_relate%(i)=100
+22510    IF 'F' INSTR markers$(rec_ref%(i),0) THEN rec_relate%(i)=200
+22520    IF rec_link%(i) AND rec_type%(i)=3
+22530       rec_relate%(i)=rec_relate%(i)+8
+22540       a$=lookup_table$(comment_table$,18,com_id%,rec_ctable%,i)
+22550       IF a$='' THEN rec_ctable%(i)=add_table%(comment_table$,com_id%,'='&lookup_table$(surname_table$,15,sur_id%,rec_ftable%,rec_pos(rec_link%(i))),18)
+22560    END IF
+22570    IF NOT rec_link%(i) THEN rec_relate%(i)=rec_relate%(i)+1
+22580    a$=condat$(0,rec_date(i))
+22590    rec_exdate%(i)=test_date
+22600 END FOR i
+22610 SELect ON file_type
+22620    =1,2,4,5,9:oldi=0
+22630       FOR i=1 TO num_recs
+22640          IF rec_link%(i)
+22650             SELect ON file_type
+22660                =1,4,9:
+22670                     a$=lookup_table$(comment_table$,18,com_id%,rec_ctable%,i)
+22680                     IF ('Bir' INSTR a$)=1 OR ('Bap' INSTR a$)=1
+22690                        rec_relate%(i)=rec_relate%(i)+2
+22700                        IF oldi AND rec_link%(i)=rec_link%(oldi)
+22710                           rec_relate%(oldi)=102:rec_relate%(i)=202
+22720                        END IF
+22730                        oldi=i
+22740                     END IF
+22750                =2,5:
+22760                     a$=lookup_table$(comment_table$,18,com_id%,rec_ctable%,i)
+22770                     IF ('Mar' INSTR a$)=1 AND LEN(a$)>8
+22780                         a$=a$(9 TO)
+22790                         g$=lookup_table$(chris_table$,16,chris_id%,rec_gtable%,i)
+22800                         IF a$ INSTR g$ THEN rec_relate%(i)=102:ELSE rec_relate%(i)=100
+22810                      END IF
+22820             END SELect
+22830          END IF
+22840       END FOR i
+22850    =7:FOR i=1 TO num_recs
+22860          a$=lookup_table$(comment_table$,18,com_id%,rec_ctable%,i)
+22870          la=LEN(a$)
+22880          IF la>14
+22890             b$=a$(14 TO 15)
+22900             check_census
+22910             IF la>15
+22920                b$=a$(15 TO 16)
+22930                check_census
+22940             END IF
+22950          END IF
+22960       END FOR i
+22970 END SELect
+22980 SELect ON file_type
+22990    =1,2,3:
+23000           FOR i=1 TO num_recs
+23010              a$=condat$(0,rec_date(i))
+23020              IF a$(1 TO 3)='   ' AND a$(5 TO 7)<>'   '
+23030                 rec_exdate%(i)=4
+23040              END IF
+23050           END FOR i
+23060 END SELect
+23070 SELect ON file_type
+23080    =3,6,7,11:
+23090           FOR i=1 TO num_recs
+23100               IF rec_type%(i)=1
+23110                  a$=condat$(0,rec_date(i))
+23120                  IF a$(1 TO 7)='       '
+23130                     rec_exdate%(i)=1
+23140                  END IF
+23150               END IF
+23160           END FOR i
+23170 END SELect
+23180 END DEFine modify_data
+23190 :
+23200 DEFine PROCedure get_inlist
+23210 GET #io_chan,fposition,in_list%(0),in_list%(1),in_date,in_list%(3),in_stamp,in_list%(5),in_list%(6),in_list%(7),in_list%(8),in_list%(9),in_list%(10),in_list%(11),in_list%(12),in_list%(13)
+23220 END DEFine get_inlist
+23230 :
+23240 DEFine PROCedure check_census
+23250             IF b$=='so' THEN rec_relate%(i)=103
+23260             IF b$=='da' THEN rec_relate%(i)=203
+23270             IF b$=='fa' THEN rec_relate%(i)=102
+23280             IF b$=='mo' THEN rec_relate%(i)=202
+23290             IF b$=='wi' THEN rec_relate%(i)=208
+23300             IF b$=='si' THEN rec_relate%(i)=206
+23310             IF b$=='br' THEN rec_relate%(i)=106
+23320             IF b$=='hu' THEN rec_relate%(i)=108
+23330 END DEFine check_census
+23340 :
+23350 DEFine FuNction add_table%(table_name$,id%,name$,sort_flag)
+23360 LOCal i
+23370 set_table(sort_flag)
+23380 IF name$='' OR name$=' ' THEN RETurn 0
+23390 IF LEN(name$)>table_len THEN name$=name$(1 TO table_len)
+23400 i=INARRAY%(table_name$,0,name$)
+23410 IF i>-1 THEN RETurn id%(i)
+23420 i=INARRAY%(table_name$,0,'*UNUSED*')
+23430 IF i>0
+23440    table_name$(i)=name$
+23450    IF sort_flag=17 THEN county_table%(i)=0
+23460    RETurn id%(i)
+23470 END IF
+23480 table_pos=table_pos+1
+23490 IF table_pos>table_max THEN
+23500    er " Table is full","Restart with increased room"
+23510    STOP
+23520 END IF
+23530 SELect ON sort_flag
+23540    =15:surpos=table_pos
+23550    =16:chrispos=table_pos
+23560    =17:placepos=table_pos
+23570    =18:commentpos=table_pos
+23580    =19:sourcepos=table_pos
+23590 END SELect
+23600 table_name$(table_pos)=name$
+23610 id%(table_pos)=table_pos
+23620 RETurn table_pos
+23630 END DEFine add_table%
+23640 :
+23650 DEFine FuNction lookup_table$(table_name$,sort_flag,id%,table%,num)
+23660 LOCal pos
+23670 set_table(sort_flag)
+23680 IF num<1 THEN RETurn ''
+23690 pos=INARRAY%(id%,0,table%(num))
+23700 IF pos<1 THEN RETurn ''
+23710 IF pos>table_pos THEN RETurn ''
+23720 RETurn table_name$(pos)
+23730 END DEFine lookup_table$
+23740 :
+23750 DEFine FuNction input_mark$
+23760 LOCal i,j,flag,in_mark
+23770 REPeat in_mark
+23780    a$=stick_up$(0,'Markers:','',18,2)
+23790 REMark   IF pick_field THEN put_marker(2)
+23800    IF a$='' THEN RETurn ''
+23810    FOR j=1 TO LEN(a$)
+23820       flag=0
+23830       IF a$(j) INSTR char$ THEN flag=1
+23840       IF a$(j) INSTR user_char$ THEN flag=1
+23850       IF a$(j)=' ' AND j<>1 THEN flag=1
+23860       IF NOT flag THEN BEEP 1500,100:NEXT in_mark
+23870    END FOR j
+23880    EXIT in_mark
+23890 END REPeat in_mark
+23900 marker_list%=0:user_marker_list%=0
+23910 FOR i=1 TO LEN(a$)
+23920    IF a$(i)<>' '
+23930       IF a$(i) INSTR char$ THEN marker_list%=marker_list%+2^((a$(i) INSTR char$)-1)
+23940       IF a$(i) INSTR user_char$ THEN user_marker_list%=user_marker_list%+2^((a$(i) INSTR user_char$)-1)
+23950    END IF
+23960 END FOR i
+23970 RETurn a$
+23980 END DEFine input_mark$
+23990 :
+24000 DEFine PROCedure save_table(table_name$,id%,table_pos,table_file)
+24010 LOCal i
+24020 m6 'Saving segment:'&file_type$(table_file)
+24030 DELETE recs_dev$&file_type$(table_file)
+24040 OPEN_NEW #io_chan,recs_dev$&file_type$(table_file)
+24050 PRINT #io_chan,table_pos
+24060 SELect ON table_file
+24070    =15:PRINT #io_chan,len_sur
+24080        table_sort surname_table$,surpos,len_sur
+24090    =16:PRINT #io_chan,len_chris
+24100        table_sort chris_table$,chrispos,len_chris
+24110    =17:PRINT #io_chan,len_place
+24120        table_sort place_table$,placepos,len_place
+24130    =18:PRINT #io_chan,len_com
+24140        table_sort comment_table$,commentpos,len_com
+24150    =19:PRINT #io_chan,len_source
+24160        table_sort source_table$,sourcepos,len_source
+24170 END SELect
+24180 IF table_file=17
+24190    FOR j=1 TO table_pos:i=sort_table%(j):PRINT #io_chan,id%(i):PRINT #io_chan,table_name$(i):PRINT #io_chan,grid_table(i):PRINT #io_chan,county_table%(i)
+24200 ELSE
+24210    FOR j=1 TO table_pos:i=sort_table%(j):PRINT #io_chan,id%(i):PRINT #io_chan,table_name$(i)
+24220 END IF
+24230 CLOSE #io_chan
+24240 qwindow stat_chan
+24250 END DEFine save_table
+24260 :
+24270 DEFine PROCedure load_table(table_file)
+24280 LOCal i,l,j,table_pos,max_table
+24290 IF NOT exists%(table_file) THEN notable%(table_file-15)=1:RETurn
+24300 m6 'Loading Segment:'&file_type$(table_file)
+24310 OPEN_IN #io_chan,recs_dev$&file_type$(table_file)
+24320 INPUT #io_chan,table_pos
+24330 max_table=table_pos+room
+24340 INPUT #io_chan,l
+24350 IF l>max_len THEN max_len=l
+24360 SELect ON table_file
+24370    =15:len_sur=l:surnum=max_table:surpos=table_pos
+24380        DIM surname_table$(max_table,l),sur_id%(max_table)
+24390        FOR j=1 TO table_pos:INPUT #io_chan,sur_id%(j):INPUT #io_chan,surname_table$(j)
+24400    =16:len_chris=l:chrisnum=max_table:chrispos=table_pos
+24410        DIM chris_table$(max_table,l),chris_id%(max_table)
+24420        FOR j=1 TO table_pos:INPUT #io_chan,chris_id%(j):INPUT #io_chan,chris_table$(j)
+24430    =17:len_place=l:placenum=max_table:placepos=table_pos
+24440        DIM place_table$(max_table,l),grid_table(max_table),county_table%(max_table),place_id%(max_table)
+24450        FOR j=1 TO table_pos:INPUT #io_chan,place_id%(j):INPUT #io_chan,place_table$(j):INPUT #io_chan,grid_table(j):INPUT #io_chan,county_table%(j)
+24460    =18:len_com=l:commentnum=max_table:commentpos=table_pos
+24470        DIM comment_table$(max_table,l),com_id%(max_table)
+24480        FOR j=1 TO table_pos:INPUT #io_chan,com_id%(j):INPUT #io_chan,comment_table$(j)
+24490    =19:len_source=l:sourcenum=max_table:sourcepos=table_pos
+24500        DIM source_table$(max_table,l),source_id%(max_table)
+24510        FOR j=1 TO table_pos:INPUT #io_chan,source_id%(j):INPUT #io_chan,source_table$(j)
+24520 END SELect
+24530 CLOSE #io_chan
+24540 qwindow stat_chan
+24550 END DEFine load_table
+24560 :
+24570 DEFine FuNction PICK_table$(arr$,length,tcount,orig$)
+24580 LOCal k,l,sort_table%(tcount)
+24590 DIM options$(tcount+10,length+2)
+24600 IF tcount<1 THEN RETurn ''
+24610 IF (tcount/(screen_length+1))>10 THEN DIM options$(tcount+INT(tcount/screen_length+1),length+2)
+24620 FOR l=0 TO tcount:options$(l)=arr$(l)
+24630 pick_num=get_opt(0,tcount,options$,lr_col,table_chan,pick_menu$,1,1)
+24640 IF pick_num=-1 THEN x$=orig$:RETurn x$
+24650 x$=options$(pick_num)
+24660 RETurn x$
+24670 END DEFine PICK_table$
+24680 :
+24690 DEFine PROCedure import
+24700 LOCal in_loop,i,j,k,l,m,count,orig
+24710 LOCal imp_file$,start,fin,N,rec,num,kk
+24720 LOCal ll,p$
+24730 k=get_opt(0,3,import_menu$,1,menu_chan,'',0,1)
+24740 IF k=0 THEN RETurn
+24750 DIM rank_field(24),field_names$(24,12),values$(24,50)
+24760 DATA "net_no","family$","given$","father","mother","yob","yod","markers$"
+24770 DATA "family$","given$","recordid","file_type$","date$","xref","event_type$","net_no","place$","comment$","source$","grid_ref$","county$","relate$","relate","exdate","date"
+24780 RESTORE 24760
+24790 FOR i=0 TO 24:READ field_names$(i)
+24800 file_type=get_opt(0,15,segments$,1,table_chan,pick_menu$,1,1)+1
+24810 IF NOT file_type THEN RETurn
+24820 other_segs
+24830 recs_file$=recs_dev$&file_type$(file_type)
+24840 get_device(recs_dev$)
+24850 exp_file$=dir$&file_type$(file_type)&'_exp'
+24860 IF get_file("Import From file>",exp_file$,1) THEN RETurn
+24870 imp_file$=exp_file$
+24880 OPEN_IN #io_chan,imp_file$
+24890 INPUT #io_chan,record$
+24900 count=chopper
+24910 recidfield=0:xreffield=0:fileid=0
+24920 start=8:fin=24:IF file_type=21 THEN start=0:fin=7
+24930 FOR i=0 TO count
+24940    FOR j=start TO fin
+24950       IF values$(i)==field_names$(j)
+24960          SELect ON j
+24970             =10:recidfield=i
+24980             =11:fileid=i
+24990             =13:xreffield=i
+25000          END SELect
+25010          rank_field(i)=j
+25020          NEXT i:EXIT i
+25030       END IF
+25040    END FOR j
+25050    IF NOT rank_field(i) THEN er 'Import file contains unrecognisable field name','field '&values$(i)&' is ignored':rank_field(i)=-1
+25060 END FOR i
+25070 make_room
+25080 SELect ON file_type
+25090    =21:IF room>max_names THEN max_names=room
+25100        SELect ON k
+25110           =1:net_num=num_names
+25120           =3:init_names:net_num=0
+25130         END SELect
+25140    =REMAINDER :IF k=3 THEN init_recs:net_num=0
+25150         IF NOT recidfield THEN er 'Cannot import, no recordids in file','':STOP
+25160 END SELect
+25170 DIM notable%(4)
+25180 reload
+25190 IF notable%(4) THEN sourcenum=room:len_source=50:DIM source_table$(sourcenum,len_source),source_id%(sourcenum)
+25200 IF notable%(1) THEN chrisnum=room:len_chris=30:DIM chris_table$(chrisnum,len_chris),chris_id%(chrisnum)
+25210 IF notable%(0) THEN surnum=room:len_sur=20:DIM surname_table$(surnum,len_sur),sur_id%(surnum)
+25220 IF notable%(2) THEN placenum=room:len_place=50:DIM place_table$(placenum,len_place),place_id%(placenum),grid_table(placenum),county_table%(placenum)
+25230 IF notable%(3) THEN commentnum=room:len_com=50:DIM comment_table$(commentnum,len_com),com_id%(commentnum)
+25240 orig=0
+25250 IF file_type=21
+25260    orig=num_names
+25270 ELSE
+25280    IF exists%(file_type) AND k<>3 THEN load_records file_type,0
+25290    IF NOT num_recs THEN init_recs:net_num=0:k=3:nextrec=1
+25300    orig=nextrec-1
+25310 END IF
+25320 OPEN_IN #io_chan,imp_file$
+25330 INPUT #io_chan,record$
+25340 FOR rec=1 TO room
+25350    INPUT #io_chan,record$
+25360    count=chopper:p$=''
+25370    IF file_type<>21
+25380       IF fileid AND values$(fileid)<>file_type$(file_type) THEN NEXT rec:EXIT rec
+25390       SELect ON k
+25400          =1:net_id=values$(recidfield)+orig:net_num=net_num+1:num_recs=num_recs+1
+25410          =2:net_num=INARRAY%(rec_id%,0,values$(recidfield))
+25420             net_id=values$(recidfield)
+25430          =3:net_id=values$(recidfield):net_num=net_num+1:num_recs=num_recs+1
+25440       END SELect
+25450       IF nextrec<=net_id THEN nextrec=net_id+1
+25460       IF net_id<1 OR net_num<1 THEN net_id=get_recnum:net_num=num_recs:IF xreffield THEN values$(xreffield)=0
+25470       IF net_num>max_recs THEN er 'Too many records','':STOP
+25480    END IF
+25490    FOR i=0 TO count
+25500       j=rank_field(i)
+25510       SELect ON j
+25520          =0:SELect ON k
+25530                =1:net_num=net_num+1
+25540                =2,3:net_num=values$(i)
+25550             END SELect
+25560             IF net_num>num_names THEN num_names=net_num
+25570             IF net_num>max_names THEN er 'Ref id out of range',net_num:STOP
+25580          =1:ftable%(net_num)=add_table%(surname_table$,sur_id%,values$(i),15)
+25590          =2:gtable%(net_num)=add_table%(chris_table$,chris_id%,values$(i),16)
+25600          =3:fa%(net_num)=values$(i)
+25610             IF k=1
+25620                IF fa%>0 THEN fa%(net_num)=fa%(net_num)+orig
+25630                IF fa%<0 THEN fa%(net_num)=fa%(net_num)-orig
+25640             END IF
+25650          =4:ma%(net_num)=values$(i)
+25660             IF k=1
+25670                IF ma%>0 THEN ma%(net_num)=ma%(net_num)+orig
+25680                IF ma%<0 THEN ma%(net_num)=ma%(net_num)-orig
+25690             END IF
+25700          =5:yofb(net_num)=values$(i)
+25710          =6:yofd%(net_num)=values$(i)
+25720          =7:l=LEN(values$(i))
+25730             IF l
+25740                FOR m=1 TO l
+25750                   N=(values$(i)(m) INSTR char$)
+25760                   IF N THEN mark%(net_num)=mark%(net_num)+2^(N-1)
+25770                   N=(values$(i)(m) INSTR user_char$)
+25780                   IF N THEN user_mark%(net_num)=user_mark%(net_num)+2^(N-1)
+25790                END FOR m
+25800             END IF
+25810          =8:rec_ftable%(net_num)=add_table%(surname_table$,sur_id%,values$(i),15)
+25820          =9:rec_gtable%(net_num)=add_table%(chris_table$,chris_id%,values$(i),16)
+25830          =10:rec_id%(net_num)=net_id
+25840              rec_stamp(net_num)=DATE
+25850          =11:l=INARRAY%(file_type$,0,values$(i))
+25860              IF l>0 THEN rec_file%(net_num)=l
+25870          =13:IF values$(i) THEN rec_link%(net_num)=values$(i)+orig
+25880          =14:l=INARRAY%(note_type$,0,values$(i))
+25890              IF l>0 THEN rec_type%(net_num)=l
+25900          =15:rec_ref%(net_num)=values$(i)
+25910          =16:rec_ptable%(net_num)=add_table%(place_table$,place_id%,values$(i),17)
+25920             p$=values$(i)
+25930          =17:rec_ctable%(net_num)=add_table%(comment_table$,com_id%,values$(i),18)
+25940          =18:rec_stable%(net_num)=add_table%(source_table$,source_id%,values$(i),19)
+25950          =19:ll=0:IF p$<>"" THEN ll=INARRAY%(place_table$,0,p$)
+25960              IF ll>0 THEN grid_table(ll)=decode_grid(values$(i))
+25970          =20:l=INARRAY%(county$,0,values$(i)):ll=0
+25980              IF l>0 AND p$<>"" THEN ll=INARRAY%(place_table$,0,p$)
+25990              IF ll>0 THEN county_table%(ll)=l
+26000          =22:rec_relate%(net_num)=values$(i)
+26010          =23:rec_exdate%(net_num)=values$(i)
+26020          =24:rec_date(net_num)=values$(i)
+26030       END SELect
+26040    END FOR i
+26050    m6 rec&' Records imported'
+26060 END FOR rec
+26070 qwindow stat_chan
+26080 CLOSE #io_chan
+26090 IF file_type=21 THEN num_edits=1:ELSE rec_edits=1
+26100 len_place=20:len_com=20:len_source=10:len_chris=20:len_sur=10
+26110 FOR i=1 TO placepos:IF LEN(place_table$(i))>len_place THEN len_place=LEN(place_table$(i))
+26120 FOR i=1 TO chrispos:IF LEN(chris_table$(i))>len_chris THEN len_chris=LEN(chris_table$(i))
+26130 FOR i=1 TO surpos:IF LEN(surname_table$(i))>len_sur THEN len_sur=LEN(surname_table$(i))
+26140 FOR i=1 TO commentpos:IF LEN(comment_table$(i))>len_com THEN len_com=LEN(comment_table$(i))
+26150 FOR i=1 TO sourcepos:IF LEN(source_table$(i))>len_source THEN len_source=LEN(source_table$(i))
+26160 save_recs
+26170 END DEFine import
+26180 :
+26190 DEFine FuNction chopper
+26200 LOCal in_loop,i,j,count,k
+26210 comma_scan
+26220 i=1:count=0:j=0
+26230 REPeat in_loop
+26240    j=(',' INSTR record$(i TO))+j
+26250    IF j>=i
+26260       values$(count)=record$(i TO j-1)
+26270       k=LEN(values$(count))
+26280       IF values$(count,1)='"' AND k>2 THEN values$(count)=values$(count)(2 TO k-1)
+26290       IF values$(count)='""' THEN values$(count)=''
+26300       i=j+1
+26310    ELSE
+26320       values$(count)=record$(i TO)
+26330       k=LEN(values$(count))
+26340       IF values$(count,1)='"' AND k>2 THEN values$(count)=values$(count)(2 TO k-1)
+26350       IF values$(count)='""' THEN values$(count)=''
+26360       EXIT in_loop
+26370    END IF
+26380    count=count+1
+26390 END REPeat in_loop
+26400 RETurn count
+26410 END DEFine chopper
+26420 :
+26430 DEFine PROCedure comma_scan
+26440 LOCal i,l,quote
+26450 quote=0
+26460 l=LEN(record$)
+26470 IF NOT l THEN RETurn
+26480 FOR i=1 TO l
+26490    IF record$(i)='"' THEN quote=ABS(quote-1)
+26500    IF quote AND record$(i)=',' THEN record$(i)='-'
+26510 END FOR i
+26520 END DEFine scan_commas
+26530 :
+26540 DEFine FuNction get_recnum
+26550 LOCal gr
+26560 IF num_recs>=max_recs
+26570    er "No more space to add records","SAVE and RELOAD to increase space available"
+26580    RETurn 0
+26590 END IF
+26600 recnum=nextrec
+26610 nextrec=nextrec+1
+26620 num_recs=num_recs+1
+26630 RETurn recnum
+26640 END DEFine get_recnum
+26650 :
+26660 DEFine FuNction decode_grid(r$)
+26670 LOCal sq1$,sq2$,north,east
+26680 IF LEN(r$) <>6 THEN RETurn 0
+26690 IF r$='      ' THEN RETurn 0
+26700 sq1$=r$(1):sq2$=r$(2)
+26710 IF sq1$ INSTR 'SN'
+26720    IF sq2$ INSTR 'AFLQV' THEN east=0
+26730    IF sq2$ INSTR 'BGMRW' THEN east=1
+26740    IF sq2$ INSTR 'CHNSX' THEN east=2
+26750    IF sq2$ INSTR 'DJOTY' THEN east=3
+26760    IF sq2$ INSTR 'EKPUZ' THEN east=4
+26770 END IF
+26780 IF sq1$="T"
+26790    IF sq2$ INSTR 'AFLQV' THEN east=5
+26800    IF sq2$ INSTR 'BGMRW' THEN east=6
+26810 END IF
+26820 IF sq2$ INSTR 'ABCDE' THEN north=4
+26830 IF sq2$ INSTR 'FGHJK' THEN north=3
+26840 IF sq2$ INSTR 'LMNOP' THEN north=2
+26850 IF sq2$ INSTR 'QRSTU' THEN north=1
+26860 IF sq2$ INSTR 'VWXYZ' THEN north=0
+26870 IF sq1$='N' THEN north=north+5
+26880 RETurn (100*east+r$(3 TO 4))*1000+(100*north+r$(5 TO 6))
+26890 END DEFine decode_grid
+26900 :
+26910 DEFine FuNction check_dir(file_name$,io,message)
+26920 LOCal x,record$,win,check_win,check_loop
+26930 found=0
+26940 OPEN_IN #io_chan,recs_dev$&'tmp'
+26950 REPeat check_win
+26960    IF EOF(#io_chan) THEN EXIT check_win
+26970    INPUT #io_chan,record$
+26980    REPeat check_loop
+26990       IF EOF(#io_chan) THEN EXIT check_loop
+27000       INPUT #io_chan,record$
+27010       win='->' INSTR record$
+27020       IF win>=3
+27030          IF record$(1 TO win-2) INSTR file$=1
+27040             dir$=dir$&record$(1 TO win-2)&'_'
+27050             CLOSE #io_chan
+27060             get_directory recs_dev$
+27070             OPEN_IN #io_chan,recs_dev$&'tmp'
+27080             NEXT check_win
+27090          END IF
+27100       END IF
+27110       IF LEN(dir$)>8 AND dir$(1)=='n' THEN record$=record$(6 TO)
+27120       IF record$==file_name$ THEN found=1:EXIT check_win
+27130    END REPeat check_loop
+27140    EXIT check_win
+27150 END REPeat check_win
+27160 CLOSE #io_chan
+27170 IF NOT message THEN RETurn found
+27180 SELect ON io
+27190    =0:SELect ON found
+27200          =0:err_code=0
+27210          =1:err_code=-warn('File exists',file_name$,'Overwrite')
+27220       END SELect
+27230    =1:SELect ON found
+27240          =0:err_code=1:er "File not found",""
+27250          =1:err_code=0
+27260       END SELect
+27270 END SELect
+27280 RETurn err_code
+27290 END DEFine check_dir
+27300 :
+27310 DEFine PROCedure check_files
+27320 LOCal ki
+27330 DIM exists%(25)
+27340 get_device(recs_dev$)
+27350 get_directory recs_dev$
+27360 FOR ki=0 TO 25:exists%(ki)=check_dir(file$&file_type$(ki),1,0)
+27370 DELETE recs_dev$&"tmp"
+27380 END DEFine check_files
+27390 :
+27400 DEFine PROCedure get_device(f$)
+27410 LOCal x
+27420 x=LEN(f$)
+27430 dir$=recs_dev$:file$=""
+27440 SELect ON x
+27450    =6 TO 40:IF "_" INSTR f$=5 THEN dir$=f$(1 TO 5):file$=f$(6 TO)
+27460             SELect ON x
+27470                =9 TO 40:IF f$(3)="_" AND f$(8)="_" THEN dir$=f$(1 TO 8):file$=f$(9 TO)
+27480                =8:IF f$(3)="_" AND f$(8)="_" THEN dir$=f$(1 TO 8)
+27490             END SELect
+27500    =5:IF "_" INSTR f$=5 THEN dir$=f$(1 TO 5)
+27510 END SELect
+27520 END DEFine get_device
+27530 :
+27540 DEFine PROCedure get_directory (pr_dev$)
+27542 LOCal t$,xlen,fstart,dir_len,loop
+27544 dir_len=LEN(dir$):fstart=LEN(dir$)
+27546 REPeat loop
+27548   DELETE recs_dev$&'tmp'
+27550   OPEN_NEW #io_chan,recs_dev$&'tmp'
+27552   DIR #io_chan,dir$
+27554   CLOSE #io_chan
+27556   OPEN_IN #io_chan,recs_dev$&'tmp'
+27558   REPeat sub2
+27560     sub_found=0
+27562     IF EOF(#io_chan):EXIT sub2
+27564     INPUT #io_chan,t$
+27566     IF '->' INSTR t$
+27568       xlen=LEN(t$)-3:IF xlen>0:IF t$(1 TO xlen)==pr_dev$(dir_len+1 TO dir_len+xlen):sub_found=1:fstart=dir_len+xlen+1:dir$=pr_dev$(1 TO fstart)
+27570       IF sub_found:EXIT sub2
+27572     END IF
+27574   END REPeat sub2
+27576   CLOSE #io_chan
+27578   IF NOT sub_found:RETurn
+27580 END REPeat loop
+27582 END DEFine
+27600 :
+27610 DEFine PROCedure make_room
+27620 LOCal in_loop,num
+27630 num=0
+27640 REPeat in_loop
+27650    IF EOF(#io_chan) THEN EXIT in_loop
+27660    INPUT #io_chan,record$:num=num+1
+27670 END REPeat in_loop
+27680 CLOSE #io_chan
+27690 room=num
+27700 END DEFine make_room
+27710 :
+27720 DEFine FuNction cleanup(table_name$,sort_flag,id%)
+27730 LOCal i,j,name$,flag
+27740 set_table(sort_flag)
+27750 DIM used_list%(table_max)
+27760 IF sort_flag=15 OR sort_flag=16
+27770    pwait
+27780    FOR i=1 TO num_names
+27790       SELect ON sort_flag
+27800          =15:name$=lookup_table$(table_name$,sort_flag,id%,ftable%,i)
+27810              ftable%(i)=check_table%(table_name$,id%,name$,sort_flag,ftable%(i))
+27820          =16:name$=lookup_table$(table_name$,sort_flag,id%,gtable%,i)
+27830              gtable%(i)=check_table%(table_name$,id%,name$,sort_flag,gtable%(i))
+27840       END SELect
+27850    END FOR i
+27860    qwindow err_chan
+27870 END IF
+27880 FOR file_type=1 TO 12,20
+27890    IF exists%(file_type)
+27900       load_records file_type,0
+27910       IF NOT exit_flag
+27920          FOR i=1 TO num_recs
+27930             SELect ON sort_flag
+27940                =15:name$=lookup_table$(table_name$,sort_flag,id%,rec_ftable%,i)
+27950                    rec_ftable%(i)=check_table%(table_name$,id%,name$,sort_flag,rec_ftable%(i))
+27960                =16:name$=lookup_table$(table_name$,sort_flag,id%,rec_gtable%,i)
+27970                    rec_gtable%(i)=check_table%(table_name$,id%,name$,sort_flag,rec_gtable%(i))
+27980                =17:name$=lookup_table$(table_name$,sort_flag,id%,rec_ptable%,i)
+27990                    rec_ptable%(i)=check_table%(table_name$,id%,name$,sort_flag,rec_ptable%(i))
+28000                =18:name$=lookup_table$(table_name$,sort_flag,id%,rec_ctable%,i)
+28010                    rec_ctable%(i)=check_table%(table_name$,id%,name$,sort_flag,rec_ctable%(i))
+28020                =19:name$=lookup_table$(table_name$,sort_flag,id%,rec_stable%,i)
+28030                    rec_stable%(i)=check_table%(table_name$,id%,name$,sort_flag,rec_stable%(i))
+28040             END SELect
+28050          END FOR i
+28060          IF rec_edits THEN save_recs
+28070       END IF
+28080    END IF
+28090 END FOR file_type
+28100 point_window 128,20,data_chan,256,200
+28110 PRINT #data_chan,"Unused names:"
+28120 flag=0
+28130 FOR i=1 TO table_pos
+28140    IF NOT used_list%(i) AND id%(i)>0
+28150       PRINT #data_chan,i!id%(i)!table_name$(i)
+28160       table_name$(i)='*UNUSED*'
+28170       flag=1
+28180    END IF
+28190 END FOR i
+28200 resume
+28210 qwindow data_chan
+28220 IF flag THEN save_table table_name$,id%,table_pos,sort_flag
+28230 RETurn 0
+28240 END DEFine cleanup
+28250 :
+28260 DEFine FuNction check_table%(table_name$,id%,name$,sort_flag,num)
+28270 LOCal j
+28280 j=add_table%(table_name$,id%,name$,sort_flag)
+28290 IF j<>num
+28300   rec_edits=1:num_edits=1
+28310 END IF
+28320 used_list%(INARRAY%(id%,0,j))=1
+28330 RETurn j
+28340 END DEFine check_table%
+28350 :
+28360 DEFine PROCedure export_rec_windows
+28370 LOCal i,header$,record$,s$,c$,f$,g$,p$
+28380 LOCal j,r,qrefno,mf$,mg$,rl,exd,qd
+28390 LOCal edat,emon
+28400 IF NOT num_recs THEN RETurn
+28410 get_device(recs_dev$)
+28420 exp_file$=dir$&file_type$(file_type)&'_txt'
+28430 IF get_file("Export "&file_type$(file_type)&" TO file>",exp_file$,0) THEN RETurn
+28440 file$=exp_file$
+28450 DELETE file$
+28460 OPEN_NEW #io_chan,file$
+28470 header$='"Family Name","Given Name","Recordid","Document Type","Document Index","Event Type","Connection Refno","Town/Village","Comment","Source","Grid Reference","County","Country","Relate Code","Qualify Date","Date Code","Qualify Refno","Master Family","Master Given","Condition"'
+28480 PRINT #io_chan,header$;CHR$(13)
+28490 FOR i=1 TO num_recs
+28500    IF rec_id%(i)
+28510       f$=lookup_table$(surname_table$,15,sur_id%,rec_ftable%,i)
+28520       g$=lookup_table$(chris_table$,16,chris_id%,rec_gtable%,i)
+28530       p$=lookup_table$(place_table$,17,place_id%,rec_ptable%,i)
+28540       c$=lookup_table$(comment_table$,18,com_id%,rec_ctable%,i)
+28550       s$=lookup_table$(source_table$,19,source_id%,rec_stable%,i)
+28560       rl=rec_link%(i)
+28570       IF rl=0 THEN rl=rec_id%(i)
+28580       mf$=lookup_table$(surname_table$,15,sur_id%,rec_ftable%,rec_pos(rl))
+28590       mg$=lookup_table$(chris_table$,16,chris_id%,rec_gtable%,rec_pos(rl))
+28600       j=rec_ref%(i)
+28610       SELect ON j
+28620          =-32767 TO -1:qrefno=2
+28630          =1 TO 32767:qrefno=1
+28640          =REMAINDER :qrefno=0
+28650       END SELect
+28660       r=rec_relate%(i)
+28670       SELect ON r
+28680          =100 TO 199:r=r+900
+28690          =200 TO 299:r=r+1800
+28700          =-199 TO -100:r=r-900
+28710          =-299 TO -200:r=r-1800
+28720       END SELect
+28730       j=INARRAY%(place_table$,0,p$)
+28740       IF j<0 THEN j=0
+28750       exd=rec_exdate%(i)
+28760       SELect ON exd
+28770          =1:qd=7
+28780          =2:qd=1
+28790          =3:qd=2
+28800          =4:qd=5
+28810          =5:qd=4
+28820          =REMAINDER :qd=0
+28830       END SELect
+28840       edat=rec_date(i)
+28850       IF edat<1.752175E6 AND edat>1E6
+28860          emon=edat-INT(edat/1000)*1000
+28870          IF emon >=50 AND emon <175
+28880             edat=edat+600
+28890          END IF
+28900       END IF
+28910       record$='"'&f$&'","'&g$&'",'&rec_id%(i)&',"'&file_type$(rec_file%(i))&'",'&rl&',"'&note_type$(rec_type%(i))&'",'&ABS(rec_ref%(i))&',"'&p$&'","'&c$&'","'&s$&'","'&get_grid$(j)&'","'&county$(county_table%(j))&'","'&country$(county_table%(j))&'",'&r&','&qd&','&edat&','&qrefno&',"'&mf$&'","'&mg$&'","'&condition$(i)&'"'
+28920       PRINT #io_chan,record$;CHR$(13)
+28930    END IF
+28940 END FOR i
+28950 CLOSE #io_chan
+28960 END DEFine export_rec_windows
+28970 :
+28980 DEFine PROCedure export_net_windows
+28990 LOCal x,header$,f$,g$,m$,seq,j
+29000 LOCal sp,m,f,mrk$
+29010 get_device(recs_dev$)
+29020 names_file$=dir$&'NET'&'_txt'
+29030 IF get_file("Export Names file TO >",names_file$,0) THEN RETurn
+29040 DELETE names_file$
+29050 OPEN_NEW #io_chan,names_file$
+29060 header$='"Refno","Family Name","Given Name","Father","Mother","Yob","Yod","Markers","Sequence","Spouse"'
+29070 PRINT #io_chan,header$;CHR$(13)
+29080       IF ma$<>''
+29090          FOR i=1 TO num_names
+29100             f$=lookup_table$(surname_table$,15,sur_id%,ftable%,i)
+29110             g$=lookup_table$(chris_table$,16,chris_id%,gtable%,i)
+29120             IF yofb(i)<100 OR INT(yofb(i))<>yofb(i) THEN seq=1:ELSE seq=0
+29130             IF yofb(i)=0 THEN seq=0
+29140             sp=0
+29150             f=fa%(i)
+29160             IF f<0 THEN sp=ABS(f):f=0
+29170             m=ma%(i)
+29180             IF m<0 THEN sp=ABS(m):m=0
+29190             m$=map_markers$(i)
+29200             IF ma$ INSTR m$ THEN PRINT #io_chan,i;',"';f$;'","';g$;'",';f;',';m;',';yofb(i);',';yofd%(i);',"';m$;'",';seq;",";sp;CHR$(13)
+29210          END FOR i
+29220       ELSE
+29230          FOR i=1 TO num_names
+29240             f$=lookup_table$(surname_table$,15,sur_id%,ftable%,i)
+29250             g$=lookup_table$(chris_table$,16,chris_id%,gtable%,i)
+29260             IF yofb(i)<100 OR INT(yofb(i))<>yofb(i) THEN seq=1:ELSE seq=0
+29270             IF yofb(i)=0 THEN seq=0
+29280             sp=0
+29290             f=fa%(i)
+29300             IF f<0 THEN sp=ABS(f):f=0
+29310             m=ma%(i)
+29320             IF m<0 THEN sp=ABS(m):m=0
+29330             m$=map_markers$(i)
+29340             PRINT #io_chan,i;',"';f$;'","';g$;'",';f;',';m;',';yofb(i);',';yofd%(i);',"';m$;'",';seq;",";sp;CHR$(13)
+29350          END FOR i
+29360       END IF
+29370 CLOSE #io_chan
+29380 num_edits=0
+29390 END DEFine export_net_windows
+29400 :
+29410 DEFine FuNction map_markers$(si)
+29420 LOCal mrk$
+29430             mrk$=markers$(si,0)
+29440             m$=""
+29450             IF "/" INSTR mrk$ THEN m$="I"
+29460             IF "F" INSTR mrk$ THEN m$="F"&m$
+29470             IF "M" INSTR mrk$ THEN m$="M"&m$
+29480             IF "Z" INSTR mrk$ THEN m$="Z"&m$
+29490             mrk$=markers$(si,8)
+29500             IF "*" INSTR mrk$ THEN m$="B"&m$
+29510             IF ">" INSTR mrk$ THEN m$="C"&m$
+29520             IF "+" INSTR mrk$ THEN m$="E"&m$
+29530             IF "-" INSTR mrk$ THEN m$="G"&m$
+29540             IF "!" INSTR mrk$ THEN m$="J"&m$
+29550             IF "?" INSTR mrk$ THEN m$="K"&m$
+29560             IF "#" INSTR mrk$ THEN m$="L"&m$
+29570             IF "@" INSTR mrk$ THEN m$="O"&m$
+29580             IF "%" INSTR mrk$ THEN m$="P"&m$
+29590             IF "&" INSTR mrk$ THEN m$="Q"&m$
+29600             IF "<" INSTR mrk$ THEN m$="C"&m$
+29610             IF "$" INSTR mrk$ THEN m$="S"&m$
+29620             IF "`" INSTR mrk$ THEN m$="T"&m$
+29630             IF "^" INSTR mrk$ THEN m$="W"&m$
+29640             IF "=" INSTR mrk$ THEN m$="X"&m$
+29650 RETurn m$
+29660 END DEFine map_markers
+29670 :
+29680 DEFine FuNction condition$(si)
+29690 LOCal sj,sk,a$,la,b$
+29700 cond$=''
+29710 sj=rec_type%(si)
+29720 SELect ON sj
+29730     =1,2:cond$='Child'
+29740     =3:cond$='Married'
+29750     =4,5:cond$='Deceased'
+29760     =0:sk=rec_relate%(si)
+29770        SELect ON sk
+29780            =2,102,202,8,108,208:cond$='Married'
+29790            =3,103,203:cond$='Child'
+29800            =REMAINDER :
+29810                     a$=lookup_table$(comment_table$,18,com_id%,rec_ctable%,i)
+29820                     IF ('Wit' INSTR a$)=1 THEN cond$='Adult'
+29830                     IF ('Ref' INSTR a$)=1 THEN cond$='Adult'
+29840                     la=LEN(a$)
+29850                     IF la>14
+29860                        b$=a$(14 TO 15)
+29870                        IF 'Wi'==b$ THEN cond$='Widowed'
+29880                        IF la>15
+29890                           b$=a$(15 TO 16)
+29900                           IF 'Wi'==b$ THEN cond$='Widowed'
+29910                        END IF
+29920                     END IF
+29930        END SELect
+29940 END SELect
+29950 cond$=cond$&'         '
+29960 RETurn cond$(1 TO 9)
+29970 END DEFine condition$

@@ -1,0 +1,18 @@
+100 device$='flp1_'
+110 smsqe=0:IF VER$='HBA':smsqe=1
+120 IF smsqe:v$=VER$(1):IF v$(3 TO)<'60':smsqe=0
+130 IF NOT smsqe
+140   TK2_EXT
+150   LRESPR device$&'ptr_gen'
+160   LRESPR device$&'wman'
+170 END IF
+180 LRESPR device$&'qlib_run'
+190 LRESPR device$&'G3_rext'
+210 CLS #0
+220 WINDOW 512,256,0,0
+230 PAPER 5:INK 0:CLS
+240 CSIZE 3,1
+250 AT 4,12:PRINT "Loading"
+260 AT 6,10:PRINT "Genealogist"
+270 AT 8,9:PRINT "Data Exchange"
+280 EX device$&'dex_obj'
